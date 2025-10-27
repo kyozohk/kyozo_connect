@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Community } from '@/types';
