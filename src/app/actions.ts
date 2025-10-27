@@ -5,7 +5,7 @@ import { getDb } from '@/lib/mongodb';
 import { Community, Member, Message, RawMessage } from '@/types';
 import { summarizeCommunityMessages, SummarizeCommunityMessagesInput } from '@/ai/flows/summarize-community-messages';
 import { ObjectId } from 'mongodb';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import { UserRecord } from 'firebase-admin/auth';
 import { FieldValue } from 'firebase-admin/firestore';
 
@@ -181,6 +181,7 @@ export async function summarizeMessages(input: SummarizeCommunityMessagesInput) 
 
 
 export async function isCommunityExported(communityId: string): Promise<boolean> {
+  const adminDb = getAdminDb();
   try {
     const docRef = adminDb.collection('communities').doc(communityId);
     const doc = await docRef.get();
@@ -192,6 +193,8 @@ export async function isCommunityExported(communityId: string): Promise<boolean>
 }
 
 export async function migrateCommunityToFirestore(communityId: string) {
+  const adminAuth = getAdminAuth();
+  const adminDb = getAdminDb();
   try {
     const db = await getDb();
 
@@ -203,16 +206,21 @@ export async function migrateCommunityToFirestore(communityId: string) {
     const userMigrationPromises = allMongoUsers.map(async (user) => {
       if (!user.email) return null;
       try {
-        let firebaseUser = await adminAuth.getUserByEmail(user.email).catch(() => null);
-        if (!firebaseUser) {
-          firebaseUser = await adminAuth.createUser({
-            email: user.email,
-            emailVerified: true,
-            displayName: user.fullName || user.displayName,
-            photoURL: user.profileImage || user.photoURL,
-            // A random password is required, user will reset it
-            password: Math.random().toString(36).slice(-8), 
-          });
+        let firebaseUser: UserRecord;
+        try {
+          firebaseUser = await adminAuth.getUserByEmail(user.email);
+        } catch (e: any) {
+          if (e.code === 'auth/user-not-found') {
+            firebaseUser = await adminAuth.createUser({
+              email: user.email,
+              emailVerified: true,
+              displayName: user.fullName || user.displayName,
+              photoURL: user.profileImage || user.photoURL,
+              password: Math.random().toString(36).slice(-8), 
+            });
+          } else {
+            throw e;
+          }
         }
         return { mongoId: user._id.toString(), firebaseUid: firebaseUser.uid };
       } catch (e) {
