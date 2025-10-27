@@ -72,6 +72,12 @@ export async function getMembers(communityId: string): Promise<Member[]> {
         }
     });
 
+    const communityOwnerId = community.owner?.toString();
+    const adminIds = (community.communityHandles || [])
+        .filter((handle: any) => handle.role === 'cl' || handle.role === 'admin')
+        .map((handle: any) => handle.userId.toString());
+
+
     const users = await db
       .collection('users')
       .find({ _id: { $in: userOids } })
@@ -79,16 +85,27 @@ export async function getMembers(communityId: string): Promise<Member[]> {
       .limit(50)
       .toArray();
 
-    return users.map((u: any) => ({
-      id: u._id.toString(),
-      uid: u.uid || u.firebaseUid,
-      displayName: u.displayName || u.fullName,
-      photoURL: u.photoURL || u.profileImage,
-      email: u.email,
-      phoneNumber: u.phoneNumber,
-      joinedAt: userJoinDates[u._id.toString()],
-      data: JSON.parse(JSON.stringify(u)),
-    }));
+    return users.map((u: any) => {
+        const userIdString = u._id.toString();
+        let role: 'owner' | 'admin' | 'member' = 'member';
+        if (userIdString === communityOwnerId) {
+            role = 'owner';
+        } else if (adminIds.includes(userIdString)) {
+            role = 'admin';
+        }
+
+        return {
+            id: userIdString,
+            uid: u.uid || u.firebaseUid,
+            displayName: u.displayName || u.fullName,
+            photoURL: u.photoURL || u.profileImage,
+            email: u.email,
+            phoneNumber: u.phoneNumber,
+            joinedAt: userJoinDates[userIdString],
+            role,
+            data: JSON.parse(JSON.stringify(u)),
+        }
+    });
   } catch (error) {
     console.error(`Failed to get members for community ${communityId}:`, error);
     return [];

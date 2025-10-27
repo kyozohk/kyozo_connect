@@ -13,6 +13,7 @@ import { ClipboardCopy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 
 export function MemberList({ 
     communityId, 
@@ -99,7 +100,14 @@ export function MemberList({
                           <AvatarFallback>{member.displayName?.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 overflow-hidden">
-                          <p className="text-sm font-medium leading-none truncate">{member.displayName}</p>
+                          <div className="flex items-center space-x-2">
+                            <p className="text-sm font-medium leading-none truncate">{member.displayName}</p>
+                            {member.role !== 'member' && (
+                                <Badge variant={member.role === 'owner' ? 'default' : 'secondary'} className="capitalize text-xs h-5">
+                                    {member.role}
+                                </Badge>
+                            )}
+                          </div>
                           <p className="text-xs text-muted-foreground truncate">{member.phoneNumber || member.email}</p>
                           {member.joinedAt && (
                              <p className="text-xs text-muted-foreground truncate">

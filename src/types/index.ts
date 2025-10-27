@@ -16,6 +16,7 @@ export interface Member {
   email: string;
   phoneNumber?: string;
   joinedAt?: string;
+  role: 'owner' | 'admin' | 'member';
   data: any;
 }
 
@@ -38,3 +39,4 @@ export type RawMessage = {
 }
 
 export interface AppUser extends FirebaseUser {}
+
