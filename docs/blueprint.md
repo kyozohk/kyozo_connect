@@ -1,3 +1,4 @@
+
 # **App Name**: KyozoConnect
 
 ## Core Features:
@@ -17,3 +18,4 @@
 - Use consistent, minimalist icons to represent communities, users, and message types.
 - Employ a three-column layout to display the community list, member list, and message list simultaneously.
 - Incorporate subtle transition animations when switching between communities or loading new messages.
+
