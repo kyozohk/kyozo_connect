@@ -68,7 +68,7 @@ export async function getMembers(communityId: string): Promise<Member[]> {
     const userOids = community.usersList.map((user: any) => user.userId);
     const userJoinDates: {[key: string]: string} = {};
     community.usersList.forEach((user: any) => {
-        if(user.userId) {
+        if(user.userId && user.joinedAt) {
             userJoinDates[user.userId.toString()] = user.joinedAt?.toISOString();
         }
     });

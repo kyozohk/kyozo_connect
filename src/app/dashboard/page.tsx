@@ -8,12 +8,12 @@ export const dynamic = 'force-dynamic';
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams?: { communityId?: string; memberId?: string };
+  searchParams: { [key: string]: string | string[] | undefined };
 }) {
   const communities: Community[] = await getCommunities();
   
-  const communityId = searchParams?.communityId;
-  const memberId = searchParams?.memberId;
+  const communityId = typeof searchParams.communityId === 'string' ? searchParams.communityId : '';
+  const memberId = typeof searchParams.memberId === 'string' ? searchParams.memberId : '';
 
   const isValidCommunityId = communities.some(c => c.id === communityId);
   
