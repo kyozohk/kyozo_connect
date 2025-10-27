@@ -43,6 +43,7 @@ export async function getCommunities(): Promise<Community[]> {
     return communities.map((c) => ({
       id: c._id.toString(),
       name: c.name,
+      data: c,
     }));
   } catch (error) {
     console.error('Failed to get communities:', error);
@@ -54,25 +55,39 @@ export async function getMembers(communityId: string): Promise<Member[]> {
   if (!communityId) return [];
   try {
     const db = await getDb();
+    
+    // First, find the community to get the list of user IDs
+    const community = await db.collection('communities').findOne({ _id: new ObjectId(communityId) });
+
+    if (!community || !community.usersList) {
+      console.log(`Community with id ${communityId} not found or has no usersList.`);
+      return [];
+    }
+
+    // Extract user OIDs from the usersList
+    const userOids = community.usersList.map((user: any) => user.userId);
+    
     const users = await db
       .collection('users')
-      .find({ communityIds: new ObjectId(communityId) })
+      .find({ _id: { $in: userOids } })
       .project({ _id: 1, uid: 1, displayName: 1, photoURL: 1, email: 1 })
       .limit(50) // To avoid large payloads
       .toArray();
 
-    return users.map((u) => ({
+    return users.map((u: any) => ({
       id: u._id.toString(),
-      uid: u.uid,
-      displayName: u.displayName,
-      photoURL: u.photoURL,
-      email: u.email
+      uid: u.uid || u.firebaseUid,
+      displayName: u.displayName || u.fullName,
+      photoURL: u.photoURL || u.profileImage,
+      email: u.email,
+      data: u,
     }));
   } catch (error) {
     console.error(`Failed to get members for community ${communityId}:`, error);
     return [];
   }
 }
+
 
 export async function getMessages(communityId: string): Promise<Message[]> {
   if (!communityId) return [];
