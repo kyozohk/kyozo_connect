@@ -56,7 +56,7 @@ export function MessageList({ communityId, communityName, member }: { communityI
       const result = await summarizeMessages({
         communityId,
         userId: user.uid,
-        messages: messages.map(m => ({ sender: m.sender.displayName, text: m.text })),
+        messages: messages.map(m => ({ sender: m.sender.displayName || 'Unknown', text: m.text })),
       });
       setSummary(result.summary);
     } catch(e) {
@@ -76,7 +76,7 @@ export function MessageList({ communityId, communityName, member }: { communityI
   };
 
   const filteredMessages = messages.filter((message) =>
-    message.text.toLowerCase().includes(searchQuery.toLowerCase())
+    message.text && message.text.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
