@@ -13,6 +13,8 @@ export interface Member {
   displayName: string;
   photoURL: string;
   email: string;
+  phoneNumber?: string;
+  joinedAt?: string;
   data: any;
 }
 

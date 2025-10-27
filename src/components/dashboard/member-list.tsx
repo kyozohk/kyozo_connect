@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { getMembers } from '@/app/actions';
 import { Member } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { ClipboardCopy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { format, parseISO } from 'date-fns';
 
 export function MemberList({ 
     communityId, 
@@ -37,9 +38,12 @@ export function MemberList({
     getMembers(communityId)
       .then((fetchedMembers) => {
         setMembers(fetchedMembers);
-        if (selectedMemberId) {
-            const member = fetchedMembers.find(m => m.id === selectedMemberId);
-            if (member) onSelectMember(member);
+        const memberToSelect = selectedMemberId 
+          ? fetchedMembers.find(m => m.id === selectedMemberId)
+          : null;
+        
+        if (memberToSelect) {
+            onSelectMember(memberToSelect);
         }
       })
       .finally(() => setLoading(false));
@@ -53,10 +57,11 @@ export function MemberList({
     });
   };
 
-  const filteredMembers = members.filter((member) =>
-    member.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    member.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredMembers = useMemo(() => members.filter((member) =>
+    (member.displayName && member.displayName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (member.email && member.email.toLowerCase().includes(searchQuery.toLowerCase()))
+  ), [members, searchQuery]);
+
 
   return (
     <div className="flex h-full flex-col border-l">
@@ -95,7 +100,12 @@ export function MemberList({
                         </Avatar>
                         <div className="flex-1 overflow-hidden">
                           <p className="text-sm font-medium leading-none truncate">{member.displayName}</p>
-                          <p className="text-xs text-muted-foreground truncate">{member.email}</p>
+                          <p className="text-xs text-muted-foreground truncate">{member.phoneNumber || member.email}</p>
+                          {member.joinedAt && (
+                             <p className="text-xs text-muted-foreground truncate">
+                                Joined: {format(parseISO(member.joinedAt), "MMM d, yyyy")}
+                             </p>
+                          )}
                         </div>
                     </div>
                     <Button

@@ -8,24 +8,25 @@ export const dynamic = 'force-dynamic';
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: { communityId?: string; memberId?: string };
+  searchParams?: { communityId?: string; memberId?: string };
 }) {
   const communities: Community[] = await getCommunities();
   
-  const isValidCommunityId = communities.some(c => c.id === searchParams.communityId);
+  const communityId = searchParams?.communityId;
+  const memberId = searchParams?.memberId;
+
+  const isValidCommunityId = communities.some(c => c.id === communityId);
   
   const initialSelectedCommunityId =
-    searchParams.communityId && isValidCommunityId
-      ? searchParams.communityId
+    communityId && isValidCommunityId
+      ? communityId
       : communities[0]?.id ?? '';
-
-  const initialSelectedMemberId = searchParams.memberId;
 
   return (
     <DashboardClient
       communities={communities}
       initialSelectedCommunityId={initialSelectedCommunityId}
-      initialSelectedMemberId={initialSelectedMemberId}
+      initialSelectedMemberId={memberId}
     />
   );
 }

@@ -57,22 +57,25 @@ export async function getMembers(communityId: string): Promise<Member[]> {
   try {
     const db = await getDb();
     
-    // First, find the community to get the list of user IDs
     const community = await db.collection('communities').findOne({ _id: new ObjectId(communityId) });
 
     if (!community || !community.usersList) {
-      console.log(`Community with id ${communityId} not found or has no usersList.`);
       return [];
     }
-
-    // Extract user OIDs from the usersList
-    const userOids = community.usersList.map((user: any) => user.userId);
     
+    const userOids = community.usersList.map((user: any) => user.userId);
+    const userJoinDates: {[key: string]: string} = {};
+    community.usersList.forEach((user: any) => {
+        if(user.userId) {
+            userJoinDates[user.userId.toString()] = user.joinedAt?.toISOString();
+        }
+    });
+
     const users = await db
       .collection('users')
       .find({ _id: { $in: userOids } })
-      .project({ _id: 1, uid: 1, displayName: 1, photoURL: 1, email: 1, fullName: 1, profileImage: 1 })
-      .limit(50) // To avoid large payloads
+      .project({ _id: 1, uid: 1, displayName: 1, photoURL: 1, email: 1, fullName: 1, profileImage: 1, phoneNumber: 1, firebaseUid: 1 })
+      .limit(50)
       .toArray();
 
     return users.map((u: any) => ({
@@ -81,6 +84,8 @@ export async function getMembers(communityId: string): Promise<Member[]> {
       displayName: u.displayName || u.fullName,
       photoURL: u.photoURL || u.profileImage,
       email: u.email,
+      phoneNumber: u.phoneNumber,
+      joinedAt: userJoinDates[u._id.toString()],
       data: JSON.parse(JSON.stringify(u)),
     }));
   } catch (error) {
