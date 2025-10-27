@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -42,23 +43,23 @@ export function MemberList({ communityId }: { communityId: string }) {
         <div className="space-y-1 p-4">
           {loading ? (
             Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="flex items-center space-x-2">
+              <div key={i} className="flex items-center space-x-2 p-2">
                 <Skeleton className="h-10 w-10 rounded-full" />
-                <div className="space-y-2">
-                    <Skeleton className="h-4 w-[150px]" />
-                    <Skeleton className="h-4 w-[100px]" />
+                <div className="w-[150px] space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-3 w-3/4" />
                 </div>
               </div>
             ))
           ) : members.length > 0 ? (
             members.map((member) => (
               <div key={member.id} className="group flex items-center justify-between space-x-3 rounded-md p-2 hover:bg-muted">
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-3 overflow-hidden">
                     <Avatar>
                       <AvatarImage src={member.photoURL} alt={member.displayName} />
-                      <AvatarFallback>{member.displayName.charAt(0)}</AvatarFallback>
+                      <AvatarFallback>{member.displayName?.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <div className="w-[150px]">
+                    <div className="w-[150px] flex-shrink-0">
                       <p className="text-sm font-medium leading-none truncate">{member.displayName}</p>
                       <p className="text-xs text-muted-foreground truncate">{member.email}</p>
                     </div>
@@ -66,7 +67,7 @@ export function MemberList({ communityId }: { communityId: string }) {
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 opacity-0 group-hover:opacity-100"
+                    className="h-8 w-8 opacity-0 group-hover:opacity-100 flex-shrink-0"
                     onClick={() => handleCopy(member)}
                 >
                     <ClipboardCopy className="h-4 w-4" />
@@ -74,7 +75,7 @@ export function MemberList({ communityId }: { communityId: string }) {
               </div>
             ))
           ) : (
-            <p className="text-sm text-muted-foreground">No members in this community.</p>
+            <p className="p-4 text-sm text-muted-foreground">No members in this community.</p>
           )}
         </div>
       </ScrollArea>

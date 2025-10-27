@@ -1,3 +1,4 @@
+
 'use server';
 
 import { getDb } from '@/lib/mongodb';
@@ -36,14 +37,14 @@ export async function getCommunities(): Promise<Community[]> {
     const db = await getDb();
     const communities = await db
       .collection('communities')
-      .find({}, { projection: { name: 1, _id: 1 } })
+      .find({})
       .sort({ name: 1 })
       .toArray();
 
     return communities.map((c) => ({
       id: c._id.toString(),
       name: c.name,
-      data: c,
+      data: JSON.parse(JSON.stringify(c)), // Ensure data is a plain object
     }));
   } catch (error) {
     console.error('Failed to get communities:', error);
@@ -70,7 +71,7 @@ export async function getMembers(communityId: string): Promise<Member[]> {
     const users = await db
       .collection('users')
       .find({ _id: { $in: userOids } })
-      .project({ _id: 1, uid: 1, displayName: 1, photoURL: 1, email: 1 })
+      .project({ _id: 1, uid: 1, displayName: 1, photoURL: 1, email: 1, fullName: 1, profileImage: 1 })
       .limit(50) // To avoid large payloads
       .toArray();
 
@@ -80,7 +81,7 @@ export async function getMembers(communityId: string): Promise<Member[]> {
       displayName: u.displayName || u.fullName,
       photoURL: u.photoURL || u.profileImage,
       email: u.email,
-      data: u,
+      data: JSON.parse(JSON.stringify(u)),
     }));
   } catch (error) {
     console.error(`Failed to get members for community ${communityId}:`, error);
