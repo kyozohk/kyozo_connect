@@ -1,17 +1,19 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDGB-sGpL90AgDPrcX8YCIVK4QmMDJgDlc",
-  authDomain: "kyozo-prod.firebaseapp.com",
-  projectId: "kyozo-prod",
-  storageBucket: "kyozo-prod.appspot.com",
-  messagingSenderId: "480316724826",
-  appId: "1:480316724826:web:db8edb5d275ef023f8ea63",
-  measurementId: "G-V1EPVV2594"
+  apiKey: "AIzaSyDdxqpBRVLlBQ_qVAJ7vqZopy-ynPHEUBo",
+  authDomain: "kyozo-7f801.firebaseapp.com",
+  projectId: "kyozo-7f801",
+  storageBucket: "kyozo-7f801.appspot.com",
+  messagingSenderId: "782676535922",
+  appId: "1:782676535922:web:ca7c53b90f4224658830eb",
+  measurementId: "G-8FE7VM59C0"
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
+const db = getFirestore(app);
 
-export { app, auth };
+export { app, auth, db };

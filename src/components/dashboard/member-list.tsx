@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { getMembers } from '@/app/actions';
 import { Member } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -27,31 +27,46 @@ export function MemberList({
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMemberId, setSelectedMemberId] = useState(initialSelectedMemberId);
+  const [selectedMemberId, setSelectedMemberId] = useState<string | undefined>(initialSelectedMemberId);
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (!communityId) {
+  const fetchAndSetMembers = useCallback(async (cId: string, memberIdToSelect?: string) => {
+    if (!cId) {
       setMembers([]);
       onSelectMember(null);
+      setSelectedMemberId(undefined);
       return;
-    };
-
+    }
     setLoading(true);
-    getMembers(communityId)
-      .then((fetchedMembers) => {
-        setMembers(fetchedMembers);
-        if (initialSelectedMemberId) {
-            const memberToSelect = fetchedMembers.find(m => m.id === initialSelectedMemberId);
-            onSelectMember(memberToSelect || null);
-            setSelectedMemberId(initialSelectedMemberId);
-        } else {
-            onSelectMember(null);
-            setSelectedMemberId(undefined);
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [communityId, initialSelectedMemberId, onSelectMember]);
+    try {
+      const fetchedMembers = await getMembers(cId);
+      setMembers(fetchedMembers);
+      
+      if (memberIdToSelect) {
+        const memberToSelect = fetchedMembers.find(m => m.id === memberIdToSelect);
+        onSelectMember(memberToSelect || null);
+        setSelectedMemberId(memberIdToSelect);
+      } else if (selectedMemberId && !fetchedMembers.some(m => m.id === selectedMemberId)) {
+        // If the previously selected member is not in the new list, deselect them
+        onSelectMember(null);
+        setSelectedMemberId(undefined);
+      }
+    } catch (error) {
+      console.error('Failed to fetch members:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not load members for this community.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [onSelectMember, toast, selectedMemberId]);
+
+  useEffect(() => {
+    fetchAndSetMembers(communityId, initialSelectedMemberId);
+  }, [communityId, initialSelectedMemberId, fetchAndSetMembers]);
+
 
   const handleSelectMember = (member: Member) => {
     setSelectedMemberId(member.id);
@@ -73,7 +88,7 @@ export function MemberList({
 
 
   return (
-    <div className="flex h-full flex-col border-l">
+    <div className="flex h-full flex-col border-l bg-card">
       <div className="p-4 border-b">
         <h2 className="text-lg font-semibold tracking-tight mb-2">Members</h2>
         <Input

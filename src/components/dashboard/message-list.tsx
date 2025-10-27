@@ -30,20 +30,33 @@ export function MessageList({ communityId, communityName, member }: { communityI
   const { user } = useAuth();
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const currentMemberId = useRef<string | null | undefined>(null);
 
   useEffect(() => {
-    if (!communityId || !member?.id) {
-      setMessages([]);
-      setLoading(false);
-      return;
+    // Only fetch messages if the member has changed
+    if (member?.id !== currentMemberId.current) {
+        currentMemberId.current = member?.id;
+        if (!communityId || !member?.id) {
+          setMessages([]);
+          setLoading(false);
+          return;
+        }
+        setLoading(true);
+        getMessagesForMember(communityId, member.id)
+          .then((msgs) => {
+            setMessages(msgs);
+          })
+          .catch(err => {
+            console.error(err);
+            toast({
+              title: "Error",
+              description: "Could not load messages.",
+              variant: "destructive"
+            });
+          })
+          .finally(() => setLoading(false));
     }
-    setLoading(true);
-    getMessagesForMember(communityId, member.id)
-      .then((msgs) => {
-        setMessages(msgs);
-      })
-      .finally(() => setLoading(false));
-  }, [communityId, member]);
+  }, [communityId, member, toast]);
   
   const handleSummarize = async () => {
     if (!user || messages.length === 0 || !member) return;
@@ -79,7 +92,7 @@ export function MessageList({ communityId, communityName, member }: { communityI
   ), [messages, searchQuery]);
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-card">
       <header className="flex items-center justify-between border-b p-4">
         <div className="flex-1">
           <h2 className="text-lg font-semibold tracking-tight">{member ? `Messages with ${member.displayName}` : 'Messages'}</h2>
