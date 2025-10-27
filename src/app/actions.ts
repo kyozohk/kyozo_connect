@@ -45,6 +45,7 @@ export async function getCommunities(): Promise<Community[]> {
       id: c._id.toString(),
       name: c.name,
       communityProfileImage: c.communityProfileImage,
+      memberCount: c.usersList?.length || 0,
       data: JSON.parse(JSON.stringify(c)), // Ensure data is a plain object
     }));
   } catch (error) {

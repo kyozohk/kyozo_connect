@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Users } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 
 interface CommunityListProps {
@@ -65,7 +66,10 @@ export function CommunityList({
                                 <Users className="h-4 w-4" />
                             </AvatarFallback>
                         </Avatar>
-                        <span className="truncate text-sm">{community.name}</span>
+                        <div className="flex-1 flex justify-between items-center">
+                          <span className="truncate text-sm">{community.name}</span>
+                           <Badge variant="outline">{community.memberCount}</Badge>
+                        </div>
                     </Button>
                     <Button
                         variant="ghost"

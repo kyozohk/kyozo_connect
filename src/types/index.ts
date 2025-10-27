@@ -5,6 +5,7 @@ export interface Community {
   id: string;
   name: string;
   communityProfileImage?: string;
+  memberCount: number;
   data: any;
 }
 
@@ -39,4 +40,3 @@ export type RawMessage = {
 }
 
 export interface AppUser extends FirebaseUser {}
-
