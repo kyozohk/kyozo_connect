@@ -33,10 +33,10 @@ function getAdminApp() {
     return adminApp;
 }
 
-export function getAdminAuth() {
+export async function getAdminAuth() {
     return getAdminApp().auth();
 }
 
-export function getAdminDb() {
+export async function getAdminDb() {
     return getAdminApp().firestore();
 }
