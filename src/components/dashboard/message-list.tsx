@@ -33,7 +33,7 @@ export function MessageList({ communityId, communityName, member }: { communityI
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!communityId || !member) {
+    if (!communityId || !member?.id) {
       setLoading(false);
       setMessages([]);
       return;
@@ -118,7 +118,7 @@ export function MessageList({ communityId, communityName, member }: { communityI
                 </div>
               ))
             ) : !member ? (
-                <div className="flex flex-col h-full items-center justify-center text-center p-8">
+                <div className="flex flex-col h-full items-center justify-center text-center p-8 mt-10">
                     <MessageSquare className="w-16 h-16 text-muted-foreground/50 mb-4" />
                     <h3 className="text-lg font-semibold">Select a member</h3>
                     <p className="text-muted-foreground">Choose a member from the list to view their messages.</p>

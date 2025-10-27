@@ -43,7 +43,8 @@ export function DashboardClient({
     } else {
         newSearchParams.delete('memberId');
     }
-    router.push(`/dashboard?${newSearchParams.toString()}`);
+    // We use replace to avoid adding a new entry to the history stack
+    router.replace(`/dashboard?${newSearchParams.toString()}`);
   }, [router, searchParams, selectedCommunityId]);
 
   const selectedCommunity = communities.find(c => c.id === selectedCommunityId);

@@ -44,11 +44,7 @@ export function MemberList({
           ? fetchedMembers.find(m => m.id === selectedMemberId)
           : null;
         
-        if (memberToSelect) {
-            onSelectMember(memberToSelect);
-        } else {
-            onSelectMember(null);
-        }
+        onSelectMember(memberToSelect);
       })
       .finally(() => setLoading(false));
   }, [communityId, selectedMemberId, onSelectMember]);
