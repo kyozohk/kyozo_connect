@@ -20,7 +20,7 @@ export default async function DashboardPage({
   const initialSelectedCommunityId =
     communityId && isValidCommunityId
       ? communityId
-      : communities[0]?.id ?? '';
+      : ''; // Default to empty string if no valid community is selected
 
   return (
     <DashboardClient

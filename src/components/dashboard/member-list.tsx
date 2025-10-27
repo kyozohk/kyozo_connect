@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { Users } from 'lucide-react';
 
 export function MemberList({ 
     communityId, 
@@ -25,7 +26,7 @@ export function MemberList({
     selectedMemberId?: string;
 }) {
   const [members, setMembers] = useState<Member[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
 
@@ -73,11 +74,18 @@ export function MemberList({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="h-9"
+            disabled={!communityId}
         />
       </div>
       <ScrollArea className="flex-1">
         <div className="space-y-1 p-2">
-          {loading ? (
+          {!communityId ? (
+             <div className="flex flex-col h-full items-center justify-center text-center p-8 mt-10">
+                <Users className="w-16 h-16 text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-semibold">Select a community</h3>
+                <p className="text-muted-foreground">Choose a community from the list to view its members.</p>
+            </div>
+          ) : loading ? (
             Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="flex items-center space-x-2 p-2">
                 <Skeleton className="h-10 w-10 rounded-full" />

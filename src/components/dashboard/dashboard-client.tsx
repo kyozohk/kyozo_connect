@@ -36,7 +36,11 @@ export function DashboardClient({
     setSelectedMember(member);
     const newSearchParams = new URLSearchParams(searchParams.toString());
     newSearchParams.set('communityId', selectedCommunityId);
-    newSearchParams.set('memberId', member.id);
+    if(member?.id) {
+        newSearchParams.set('memberId', member.id);
+    } else {
+        newSearchParams.delete('memberId');
+    }
     router.push(`/dashboard?${newSearchParams.toString()}`);
   };
 
@@ -65,7 +69,7 @@ export function DashboardClient({
               key={selectedCommunityId} 
               communityId={selectedCommunityId}
               onSelectMember={handleSelectMember}
-              selectedMemberId={selectedMember?.id}
+              selectedMemberId={initialSelectedMemberId}
               />
           </ResizablePanel>
           <ResizableHandle withHandle />
