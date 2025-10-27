@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Community, Member } from '@/types';
 import { UserNav } from './user-nav';
 import { CommunityList } from './community-list';
@@ -20,16 +20,17 @@ export function DashboardClient({
   initialSelectedMemberId?: string;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [selectedCommunityId, setSelectedCommunityId] = useState(initialSelectedCommunityId);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 
   const handleSelectCommunity = (communityId: string) => {
     setSelectedCommunityId(communityId);
-    setSelectedMember(null); // Reset member selection
+    setSelectedMember(null); 
     const newSearchParams = new URLSearchParams();
     newSearchParams.set('communityId', communityId);
-    router.push(`/dashboard?${newSearchParams.toString()}`);
+    router.push(`${pathname}?${newSearchParams.toString()}`);
   };
 
   const handleSelectMember = useCallback((member: Member | null) => {
@@ -37,15 +38,18 @@ export function DashboardClient({
     const newSearchParams = new URLSearchParams(searchParams.toString());
     if (selectedCommunityId) {
       newSearchParams.set('communityId', selectedCommunityId);
+    } else {
+       newSearchParams.delete('communityId');
     }
+
     if(member?.id) {
         newSearchParams.set('memberId', member.id);
     } else {
         newSearchParams.delete('memberId');
     }
-    // We use replace to avoid adding a new entry to the history stack
-    router.replace(`/dashboard?${newSearchParams.toString()}`);
-  }, [router, searchParams, selectedCommunityId]);
+    
+    router.replace(`${pathname}?${newSearchParams.toString()}`);
+  }, [router, searchParams, selectedCommunityId, pathname]);
 
   const selectedCommunity = communities.find(c => c.id === selectedCommunityId);
 
@@ -72,7 +76,7 @@ export function DashboardClient({
               key={selectedCommunityId} 
               communityId={selectedCommunityId}
               onSelectMember={handleSelectMember}
-              selectedMemberId={initialSelectedMemberId}
+              initialSelectedMemberId={initialSelectedMemberId}
               />
           </ResizablePanel>
           <ResizableHandle withHandle />

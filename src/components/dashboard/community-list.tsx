@@ -54,11 +54,10 @@ export function CommunityList({
             <div className="space-y-1 p-2">
             {filteredCommunities.length > 0 ? (
                 filteredCommunities.map((community) => (
-                <div key={community.id} className="group flex items-center">
-                    <Button
-                        variant={selectedCommunityId === community.id ? 'secondary' : 'ghost'}
-                        className="w-full justify-start flex-grow h-auto py-2"
-                        onClick={() => onSelectCommunity(community.id)}
+                <div key={community.id} className="group flex items-center rounded-md pr-2 hover:bg-muted"
+                  onClick={() => onSelectCommunity(community.id)}>
+                    <div
+                        className={`w-full justify-start flex-grow h-auto py-2 px-2 flex items-center cursor-pointer rounded-md ${selectedCommunityId === community.id ? 'bg-secondary' : ''}`}
                     >
                         <Avatar className="mr-3 h-8 w-8">
                             <AvatarImage src={community.communityProfileImage} alt={community.name} />
@@ -70,7 +69,7 @@ export function CommunityList({
                           <span className="truncate text-sm">{community.name}</span>
                            <Badge variant="outline">{community.memberCount}</Badge>
                         </div>
-                    </Button>
+                    </div>
                     <Button
                         variant="ghost"
                         size="icon"

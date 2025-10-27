@@ -27,7 +27,7 @@ export function LoginButton() {
           displayName: user.displayName!,
           photoURL: user.photoURL!,
         });
-        router.push('/dashboard');
+        router.push('/inbox');
       }
     } catch (error) {
       console.error("Authentication error:", error);

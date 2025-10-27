@@ -13,7 +13,7 @@ export default function Home() {
   useEffect(() => {
     if (!loading) {
       if (user) {
-        router.replace('/dashboard');
+        router.replace('/inbox');
       } else {
         router.replace('/login');
       }

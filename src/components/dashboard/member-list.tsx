@@ -19,15 +19,16 @@ import { Users } from 'lucide-react';
 export function MemberList({ 
     communityId, 
     onSelectMember,
-    selectedMemberId
+    initialSelectedMemberId
 }: { 
     communityId: string;
     onSelectMember: (member: Member | null) => void;
-    selectedMemberId?: string;
+    initialSelectedMemberId?: string;
 }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedMemberId, setSelectedMemberId] = useState(initialSelectedMemberId);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -36,18 +37,27 @@ export function MemberList({
       onSelectMember(null);
       return;
     };
+
     setLoading(true);
     getMembers(communityId)
       .then((fetchedMembers) => {
         setMembers(fetchedMembers);
-        const memberToSelect = selectedMemberId 
-          ? fetchedMembers.find(m => m.id === selectedMemberId)
-          : null;
-        
-        onSelectMember(memberToSelect);
+        if (initialSelectedMemberId) {
+            const memberToSelect = fetchedMembers.find(m => m.id === initialSelectedMemberId);
+            onSelectMember(memberToSelect || null);
+            setSelectedMemberId(initialSelectedMemberId);
+        } else {
+            onSelectMember(null);
+            setSelectedMemberId(undefined);
+        }
       })
       .finally(() => setLoading(false));
-  }, [communityId, selectedMemberId, onSelectMember]);
+  }, [communityId, initialSelectedMemberId, onSelectMember]);
+
+  const handleSelectMember = (member: Member) => {
+    setSelectedMemberId(member.id);
+    onSelectMember(member);
+  }
 
   const handleCopy = (member: Member) => {
     navigator.clipboard.writeText(JSON.stringify(member.data, null, 2));
@@ -96,7 +106,7 @@ export function MemberList({
           ) : filteredMembers.length > 0 ? (
             filteredMembers.map((member) => (
                 <div key={member.id} className="group flex items-center justify-between rounded-md pr-2 hover:bg-muted"
-                     onClick={() => onSelectMember(member)}>
+                     onClick={() => handleSelectMember(member)}>
                     <div className={cn(
                         "flex items-center space-x-3 overflow-hidden p-2 flex-grow cursor-pointer rounded-md",
                         selectedMemberId === member.id && "bg-secondary"

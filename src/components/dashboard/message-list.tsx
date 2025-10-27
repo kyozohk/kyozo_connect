@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { getMessagesForMember, summarizeMessages } from '@/app/actions';
 import { useAuth } from '@/hooks/use-auth';
 import { Message, Member } from '@/types';
@@ -23,7 +23,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 export function MessageList({ communityId, communityName, member }: { communityId: string, communityName?: string, member: Member | null }) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSummarizing, setIsSummarizing] = useState(false);
@@ -34,8 +34,8 @@ export function MessageList({ communityId, communityName, member }: { communityI
 
   useEffect(() => {
     if (!communityId || !member?.id) {
-      setLoading(false);
       setMessages([]);
+      setLoading(false);
       return;
     }
     setLoading(true);
@@ -75,9 +75,9 @@ export function MessageList({ communityId, communityName, member }: { communityI
     });
   };
 
-  const filteredMessages = messages.filter((message) =>
+  const filteredMessages = useMemo(() => messages.filter((message) =>
     message.text && message.text.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ), [messages, searchQuery]);
 
   return (
     <div className="flex h-full flex-col">
@@ -151,7 +151,7 @@ export function MessageList({ communityId, communityName, member }: { communityI
               ))
             ) : (
               <div className="flex h-full items-center justify-center">
-                <p className="text-muted-foreground">No messages found.</p>
+                <p className="text-muted-foreground">No messages found for this member.</p>
               </div>
             )}
           </div>
