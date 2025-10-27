@@ -1,3 +1,4 @@
+
 import type { User as FirebaseUser } from 'firebase/auth';
 
 export interface Community {
@@ -17,15 +18,18 @@ export interface Member {
 
 export interface Message {
   id: string;
-  sender: Member;
+  sender: Partial<Member>;
   text: string;
   createdAt: string;
+  data: any;
 }
 
 export type RawMessage = {
     _id: import('mongodb').ObjectId;
-    communityId: import('mongodb').ObjectId;
-    senderId: import('mongodb').ObjectId;
+    communityId?: import('mongodb').ObjectId; // Optional as it might be on the channel
+    channel?: import('mongodb').ObjectId;
+    senderId?: import('mongodb').ObjectId; // Legacy
+    user?: import('mongodb').ObjectId; // Preferred
     text: string;
     createdAt: Date;
 }

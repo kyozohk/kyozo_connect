@@ -89,6 +89,68 @@ export async function getMembers(communityId: string): Promise<Member[]> {
   }
 }
 
+export async function getMessagesForMember(communityId: string, memberId: string): Promise<Message[]> {
+  if (!communityId || !memberId) return [];
+  try {
+    const db = await getDb();
+    const memberObjectId = new ObjectId(memberId);
+    const communityObjectId = new ObjectId(communityId);
+
+    const channel = await db.collection('channels').findOne({
+      user: memberObjectId,
+      community: communityObjectId,
+    });
+
+    if (!channel) {
+      return [];
+    }
+
+    const messagesFromDb: any[] = await db.collection('messages').aggregate([
+      { $match: { channel: channel._id } },
+      { $sort: { createdAt: -1 } },
+      { $limit: 100 },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user', // user on message is the sender
+          foreignField: '_id',
+          as: 'senderInfo'
+        }
+      },
+      { $unwind: { path: '$senderInfo', preserveNullAndEmptyArrays: true } }
+    ]).toArray();
+
+    return messagesFromDb.map((m: any) => ({
+      id: m._id.toString(),
+      text: m.text,
+      createdAt: m.createdAt.toISOString(),
+      sender: m.senderInfo ? {
+        id: m.senderInfo._id.toString(),
+        uid: m.senderInfo.uid,
+        displayName: m.senderInfo.displayName || m.senderInfo.fullName,
+        photoURL: m.senderInfo.photoURL || m.senderInfo.profileImage,
+        email: m.senderInfo.email,
+        data: JSON.parse(JSON.stringify(m.senderInfo)),
+      } : { // Handle case where sender might not be in users collection or is system message
+        id: m.user?.toString() || 'unknown',
+        uid: 'unknown',
+        displayName: 'Unknown Sender',
+        photoURL: '',
+        email: '',
+        data: {},
+      },
+      data: JSON.parse(JSON.stringify(m)),
+    }));
+  } catch (error) {
+    console.error(`Failed to get messages for member ${memberId} in community ${communityId}:`, error);
+    return [];
+  }
+}
+
+
+export async function summarizeMessages(input: SummarizeCommunityMessagesInput) {
+    return await summarizeCommunityMessages(input);
+}
 
 export async function getMessages(communityId: string): Promise<Message[]> {
   if (!communityId) return [];
@@ -97,7 +159,7 @@ export async function getMessages(communityId: string): Promise<Message[]> {
     
     const messages: RawMessage[] = await db.collection('messages').aggregate([
       { $match: { communityId: new ObjectId(communityId) } },
-      { $sort: { createdAt: 1 } },
+      { $sort: { createdAt: -1 } },
       { $limit: 100 },
       {
         $lookup: {
@@ -120,14 +182,12 @@ export async function getMessages(communityId: string): Promise<Message[]> {
         displayName: m.senderInfo.displayName,
         photoURL: m.senderInfo.photoURL,
         email: m.senderInfo.email,
-      }
+        data: {},
+      },
+      data: JSON.parse(JSON.stringify(m)),
     }));
   } catch (error) {
     console.error(`Failed to get messages for community ${communityId}:`, error);
     return [];
   }
-}
-
-export async function summarizeMessages(input: SummarizeCommunityMessagesInput) {
-    return await summarizeCommunityMessages(input);
 }

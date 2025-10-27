@@ -1,10 +1,13 @@
+
 'use client';
 
 import { Community } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
 import { Users, ClipboardCopy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
 
 interface CommunityListProps {
   communities: Community[];
@@ -18,6 +21,7 @@ export function CommunityList({
   onSelectCommunity,
 }: CommunityListProps) {
   const { toast } = useToast();
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleCopy = (community: Community) => {
     navigator.clipboard.writeText(JSON.stringify(community.data, null, 2));
@@ -27,13 +31,25 @@ export function CommunityList({
     });
   };
 
+  const filteredCommunities = communities.filter((community) =>
+    community.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="flex h-full flex-col">
-        <h2 className="p-4 text-lg font-semibold tracking-tight">Communities</h2>
-        <ScrollArea className="flex-1 px-2">
+        <div className="p-4 border-b">
+            <h2 className="text-lg font-semibold tracking-tight mb-2">Communities</h2>
+            <Input
+                placeholder="Search communities..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-9"
+            />
+        </div>
+        <ScrollArea className="flex-1">
             <div className="space-y-1 p-2">
-            {communities.length > 0 ? (
-                communities.map((community) => (
+            {filteredCommunities.length > 0 ? (
+                filteredCommunities.map((community) => (
                 <div key={community.id} className="group flex items-center">
                     <Button
                         variant={selectedCommunityId === community.id ? 'secondary' : 'ghost'}

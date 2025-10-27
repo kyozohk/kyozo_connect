@@ -8,12 +8,23 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ClipboardCopy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
-export function MemberList({ communityId }: { communityId: string }) {
+export function MemberList({ 
+    communityId, 
+    onSelectMember,
+    selectedMemberId
+}: { 
+    communityId: string;
+    onSelectMember: (member: Member) => void;
+    selectedMemberId?: string;
+}) {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -24,9 +35,15 @@ export function MemberList({ communityId }: { communityId: string }) {
     };
     setLoading(true);
     getMembers(communityId)
-      .then(setMembers)
+      .then((fetchedMembers) => {
+        setMembers(fetchedMembers);
+        if (selectedMemberId) {
+            const member = fetchedMembers.find(m => m.id === selectedMemberId);
+            if (member) onSelectMember(member);
+        }
+      })
       .finally(() => setLoading(false));
-  }, [communityId]);
+  }, [communityId, selectedMemberId, onSelectMember]);
 
   const handleCopy = (member: Member) => {
     navigator.clipboard.writeText(JSON.stringify(member.data, null, 2));
@@ -36,11 +53,24 @@ export function MemberList({ communityId }: { communityId: string }) {
     });
   };
 
+  const filteredMembers = members.filter((member) =>
+    member.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    member.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="flex h-full flex-col border-l">
-      <h2 className="p-4 text-lg font-semibold tracking-tight">Members</h2>
+      <div className="p-4 border-b">
+        <h2 className="text-lg font-semibold tracking-tight mb-2">Members</h2>
+        <Input
+            placeholder="Search members..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-9"
+        />
+      </div>
       <ScrollArea className="flex-1">
-        <div className="space-y-1 p-4">
+        <div className="space-y-1 p-2">
           {loading ? (
             Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="flex items-center space-x-2 p-2">
@@ -51,28 +81,32 @@ export function MemberList({ communityId }: { communityId: string }) {
                 </div>
               </div>
             ))
-          ) : members.length > 0 ? (
-            members.map((member) => (
-              <div key={member.id} className="group flex items-center justify-between space-x-3 rounded-md p-2 hover:bg-muted">
-                <div className="flex items-center space-x-3 overflow-hidden">
-                    <Avatar>
-                      <AvatarImage src={member.photoURL} alt={member.displayName} />
-                      <AvatarFallback>{member.displayName?.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div className="w-[150px] flex-shrink-0">
-                      <p className="text-sm font-medium leading-none truncate">{member.displayName}</p>
-                      <p className="text-xs text-muted-foreground truncate">{member.email}</p>
+          ) : filteredMembers.length > 0 ? (
+            filteredMembers.map((member) => (
+                <div key={member.id} className="group flex items-center justify-between rounded-md pr-2 hover:bg-muted"
+                     onClick={() => onSelectMember(member)}>
+                    <div className={cn(
+                        "flex items-center space-x-3 overflow-hidden p-2 flex-grow cursor-pointer rounded-md",
+                        selectedMemberId === member.id && "bg-secondary"
+                        )}>
+                        <Avatar>
+                          <AvatarImage src={member.photoURL} alt={member.displayName} />
+                          <AvatarFallback>{member.displayName?.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 overflow-hidden">
+                          <p className="text-sm font-medium leading-none truncate">{member.displayName}</p>
+                          <p className="text-xs text-muted-foreground truncate">{member.email}</p>
+                        </div>
                     </div>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 opacity-0 group-hover:opacity-100 flex-shrink-0"
+                        onClick={(e) => { e.stopPropagation(); handleCopy(member); }}
+                    >
+                        <ClipboardCopy className="h-4 w-4" />
+                    </Button>
                 </div>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 opacity-0 group-hover:opacity-100 flex-shrink-0"
-                    onClick={() => handleCopy(member)}
-                >
-                    <ClipboardCopy className="h-4 w-4" />
-                </Button>
-              </div>
             ))
           ) : (
             <p className="p-4 text-sm text-muted-foreground">No members in this community.</p>

@@ -1,14 +1,17 @@
+
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { getMessages, summarizeMessages } from '@/app/actions';
+import { getMessagesForMember, summarizeMessages } from '@/app/actions';
 import { useAuth } from '@/hooks/use-auth';
-import { Message } from '@/types';
+import { Message, Member } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Wand2, Loader2 } from 'lucide-react';
+import { Wand2, Loader2, ClipboardCopy, MessageSquare } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
   DialogContent,
@@ -18,35 +21,33 @@ import {
 } from "@/components/ui/dialog"
 import { formatDistanceToNow } from 'date-fns';
 
-export function MessageList({ communityId, communityName }: { communityId: string, communityName?: string }) {
+export function MessageList({ communityId, communityName, member }: { communityId: string, communityName?: string, member: Member | null }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
   const { user } = useAuth();
+  const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!communityId) {
+    if (!communityId || !member) {
       setLoading(false);
+      setMessages([]);
       return;
     }
     setLoading(true);
-    getMessages(communityId)
+    getMessagesForMember(communityId, member.id)
       .then((msgs) => {
         setMessages(msgs);
-        setTimeout(() => {
-          if (scrollAreaRef.current) {
-            scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
-          }
-        }, 100);
       })
       .finally(() => setLoading(false));
-  }, [communityId]);
+  }, [communityId, member]);
   
   const handleSummarize = async () => {
-    if (!user || messages.length === 0) return;
+    if (!user || messages.length === 0 || !member) return;
     setIsSummarizing(true);
     setIsSummaryDialogOpen(true);
     setSummary('');
@@ -66,10 +67,25 @@ export function MessageList({ communityId, communityName }: { communityId: strin
     }
   };
 
+  const handleCopy = (message: Message) => {
+    navigator.clipboard.writeText(JSON.stringify(message.data, null, 2));
+    toast({
+      title: 'Copied to clipboard',
+      description: `Message data has been copied.`,
+    });
+  };
+
+  const filteredMessages = messages.filter((message) =>
+    message.text.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="flex h-full flex-col">
       <header className="flex items-center justify-between border-b p-4">
-        <h2 className="text-lg font-semibold tracking-tight">{communityName || 'Messages'}</h2>
+        <div className="flex-1">
+          <h2 className="text-lg font-semibold tracking-tight">{member ? `Messages with ${member.displayName}` : 'Messages'}</h2>
+          {member && <p className="text-sm text-muted-foreground">{communityName}</p>}
+        </div>
         <Button onClick={handleSummarize} disabled={isSummarizing || messages.length === 0} size="sm">
           {isSummarizing ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -79,6 +95,15 @@ export function MessageList({ communityId, communityName }: { communityId: strin
           Summarize
         </Button>
       </header>
+      <div className="p-4 border-b">
+        <Input
+            placeholder="Search messages..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-9"
+            disabled={!member}
+        />
+      </div>
       <div className="flex-1 overflow-hidden">
         <ScrollArea className="h-full" ref={scrollAreaRef}>
           <div className="space-y-4 p-4">
@@ -92,12 +117,18 @@ export function MessageList({ communityId, communityName }: { communityId: strin
                   </div>
                 </div>
               ))
-            ) : messages.length > 0 ? (
-              messages.map((message) => (
-                <div key={message.id} className="flex items-start space-x-3">
+            ) : !member ? (
+                <div className="flex flex-col h-full items-center justify-center text-center p-8">
+                    <MessageSquare className="w-16 h-16 text-muted-foreground/50 mb-4" />
+                    <h3 className="text-lg font-semibold">Select a member</h3>
+                    <p className="text-muted-foreground">Choose a member from the list to view their messages.</p>
+                </div>
+            ) : filteredMessages.length > 0 ? (
+              filteredMessages.map((message) => (
+                <div key={message.id} className="group flex items-start space-x-3">
                   <Avatar>
                     <AvatarImage src={message.sender.photoURL} alt={message.sender.displayName} />
-                    <AvatarFallback>{message.sender.displayName.charAt(0)}</AvatarFallback>
+                    <AvatarFallback>{message.sender.displayName?.charAt(0) || '?'}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <div className="flex items-baseline space-x-2">
@@ -106,13 +137,21 @@ export function MessageList({ communityId, communityName }: { communityId: strin
                             {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
                         </p>
                     </div>
-                    <p className="text-sm text-foreground/90">{message.text}</p>
+                    <p className="text-sm text-foreground/90 whitespace-pre-wrap">{message.text}</p>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 opacity-0 group-hover:opacity-100 flex-shrink-0"
+                    onClick={() => handleCopy(message)}
+                  >
+                    <ClipboardCopy className="h-4 w-4" />
+                  </Button>
                 </div>
               ))
             ) : (
               <div className="flex h-full items-center justify-center">
-                <p className="text-muted-foreground">No messages yet. Start the conversation!</p>
+                <p className="text-muted-foreground">No messages found.</p>
               </div>
             )}
           </div>
@@ -123,7 +162,7 @@ export function MessageList({ communityId, communityName }: { communityId: strin
           <DialogHeader>
             <DialogTitle>Conversation Summary</DialogTitle>
             <DialogDescription>
-              Here's a quick summary of the latest messages in {communityName}.
+              {`Here's a quick summary of the messages with ${member?.displayName} in ${communityName}.`}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">

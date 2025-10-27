@@ -1,30 +1,42 @@
+
 'use client';
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Community } from '@/types';
+import { Community, Member } from '@/types';
 import { UserNav } from './user-nav';
 import { CommunityList } from './community-list';
 import { MemberList } from './member-list';
 import { MessageList } from './message-list';
-import { Card } from '@/components/ui/card';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 
 export function DashboardClient({
   communities,
   initialSelectedCommunityId,
+  initialSelectedMemberId,
 }: {
   communities: Community[];
   initialSelectedCommunityId: string;
+  initialSelectedMemberId?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedCommunityId, setSelectedCommunityId] = useState(initialSelectedCommunityId);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 
   const handleSelectCommunity = (communityId: string) => {
     setSelectedCommunityId(communityId);
-    const newSearchParams = new URLSearchParams(searchParams.toString());
+    setSelectedMember(null); // Reset member selection
+    const newSearchParams = new URLSearchParams();
     newSearchParams.set('communityId', communityId);
+    router.push(`/dashboard?${newSearchParams.toString()}`);
+  };
+
+  const handleSelectMember = (member: Member) => {
+    setSelectedMember(member);
+    const newSearchParams = new URLSearchParams(searchParams.toString());
+    newSearchParams.set('communityId', selectedCommunityId);
+    newSearchParams.set('memberId', member.id);
     router.push(`/dashboard?${newSearchParams.toString()}`);
   };
 
@@ -48,12 +60,22 @@ export function DashboardClient({
             />
           </ResizablePanel>
           <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={55} minSize={30}>
-             <MessageList key={selectedCommunityId} communityId={selectedCommunityId} communityName={selectedCommunity?.name} />
+          <ResizablePanel defaultSize={25} minSize={15} maxSize={30}>
+            <MemberList 
+              key={selectedCommunityId} 
+              communityId={selectedCommunityId}
+              onSelectMember={handleSelectMember}
+              selectedMemberId={selectedMember?.id}
+              />
           </ResizablePanel>
           <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={25} minSize={15} maxSize={30}>
-            <MemberList key={selectedCommunityId} communityId={selectedCommunityId} />
+          <ResizablePanel defaultSize={55} minSize={30}>
+             <MessageList 
+                key={`${selectedCommunityId}-${selectedMember?.id}`}
+                communityId={selectedCommunityId} 
+                communityName={selectedCommunity?.name}
+                member={selectedMember}
+              />
           </ResizablePanel>
         </ResizablePanelGroup>
       </main>

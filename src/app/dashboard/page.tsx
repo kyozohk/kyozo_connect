@@ -1,3 +1,4 @@
+
 import { getCommunities } from '@/app/actions';
 import { DashboardClient } from '@/components/dashboard/dashboard-client';
 import { Community } from '@/types';
@@ -7,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: { communityId?: string };
+  searchParams: { communityId?: string; memberId?: string };
 }) {
   const communities: Community[] = await getCommunities();
   
@@ -18,10 +19,13 @@ export default async function DashboardPage({
       ? searchParams.communityId
       : communities[0]?.id ?? '';
 
+  const initialSelectedMemberId = searchParams.memberId;
+
   return (
     <DashboardClient
       communities={communities}
       initialSelectedCommunityId={initialSelectedCommunityId}
+      initialSelectedMemberId={initialSelectedMemberId}
     />
   );
 }
