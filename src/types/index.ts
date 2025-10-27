@@ -4,6 +4,7 @@ import type { User as FirebaseUser } from 'firebase/auth';
 export interface Community {
   id: string;
   name: string;
+  communityProfileImage?: string;
   data: any;
 }
 

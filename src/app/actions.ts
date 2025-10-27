@@ -44,6 +44,7 @@ export async function getCommunities(): Promise<Community[]> {
     return communities.map((c) => ({
       id: c._id.toString(),
       name: c.name,
+      communityProfileImage: c.communityProfileImage,
       data: JSON.parse(JSON.stringify(c)), // Ensure data is a plain object
     }));
   } catch (error) {
