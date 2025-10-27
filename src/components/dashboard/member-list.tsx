@@ -22,7 +22,7 @@ export function MemberList({
     selectedMemberId
 }: { 
     communityId: string;
-    onSelectMember: (member: Member) => void;
+    onSelectMember: (member: Member | null) => void;
     selectedMemberId?: string;
 }) {
   const [members, setMembers] = useState<Member[]>([]);
@@ -32,8 +32,8 @@ export function MemberList({
 
   useEffect(() => {
     if (!communityId) {
-      setLoading(false);
       setMembers([]);
+      onSelectMember(null);
       return;
     };
     setLoading(true);
@@ -46,6 +46,8 @@ export function MemberList({
         
         if (memberToSelect) {
             onSelectMember(memberToSelect);
+        } else {
+            onSelectMember(null);
         }
       })
       .finally(() => setLoading(false));

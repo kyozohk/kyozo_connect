@@ -32,7 +32,7 @@ export function DashboardClient({
     router.push(`/dashboard?${newSearchParams.toString()}`);
   };
 
-  const handleSelectMember = useCallback((member: Member) => {
+  const handleSelectMember = useCallback((member: Member | null) => {
     setSelectedMember(member);
     const newSearchParams = new URLSearchParams(searchParams.toString());
     if (selectedCommunityId) {
