@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Community, Member } from '@/types';
 import { UserNav } from './user-nav';
@@ -32,17 +32,19 @@ export function DashboardClient({
     router.push(`/dashboard?${newSearchParams.toString()}`);
   };
 
-  const handleSelectMember = (member: Member) => {
+  const handleSelectMember = useCallback((member: Member) => {
     setSelectedMember(member);
     const newSearchParams = new URLSearchParams(searchParams.toString());
-    newSearchParams.set('communityId', selectedCommunityId);
+    if (selectedCommunityId) {
+      newSearchParams.set('communityId', selectedCommunityId);
+    }
     if(member?.id) {
         newSearchParams.set('memberId', member.id);
     } else {
         newSearchParams.delete('memberId');
     }
     router.push(`/dashboard?${newSearchParams.toString()}`);
-  };
+  }, [router, searchParams, selectedCommunityId]);
 
   const selectedCommunity = communities.find(c => c.id === selectedCommunityId);
 
