@@ -1,3 +1,4 @@
+
 'use server';
 
 import { getDb } from '@/lib/mongodb';
@@ -265,7 +266,7 @@ export async function getCommunityExportData(communityId: string) {
     const userEmailMap = new Map(usersToMigrate.map(u => [u._id.toString(), u.email]));
 
     exportPreviewData.messages = mongoMessages.map(message => {
-        const senderMongoId = message.user?.toString();
+        const senderMongoId = (message.user || message.senderId)?.toString();
         const senderEmail = userEmailMap.get(senderMongoId) || 'unknown-email';
         return {
             text: message.text,
@@ -333,16 +334,19 @@ export async function migrateCommunityToFirestore(communityId: string) {
         let firebaseUser: UserRecord;
         let isNewUser = false;
         try {
+          // Find existing user by email
           firebaseUser = await adminAuth.getUserByEmail(user.email);
+          // Update existing user's info
           await adminAuth.updateUser(firebaseUser.uid, {
               displayName: user.fullName || user.displayName || '',
               photoURL: user.profileImage || user.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(user.fullName || user.displayName || 'U')}`,
               phoneNumber: user.phoneNumber,
            });
-           // Re-fetch the user record to ensure we have the latest data after the update.
+           // Re-fetch to ensure we have the latest data
            firebaseUser = await adminAuth.getUser(firebaseUser.uid); 
         } catch (e: any) {
           if (e.code === 'auth/user-not-found') {
+            // Create a new user if not found
             isNewUser = true;
             firebaseUser = await adminAuth.createUser({
               email: user.email,
@@ -352,9 +356,11 @@ export async function migrateCommunityToFirestore(communityId: string) {
               phoneNumber: user.phoneNumber,
             });
           } else {
+             // Re-throw other auth errors
              throw e;
           }
         }
+        // Return the mapping for both new and existing users
         return { mongoId: user._id.toString(), firebaseUid: firebaseUser.uid, isNewUser };
       } catch (e) {
         console.error(`[MIGRATION_ERROR] Failed to migrate user ${user.email} (MongoID: ${user._id}):`, e);
@@ -433,7 +439,7 @@ export async function migrateCommunityToFirestore(communityId: string) {
     console.log(`[MIGRATION_LOG] Prepared ${exportedData.memberships.length} membership documents for batch write.`);
     
     // ** Step 8: Migrate Messages
-    const mongoChannels = await db.collection('channels').find({ community: new ObjectId(communityId) }).toArray();
+    const mongoChannels = await db.collection('channels').find({ community: rawMongoCommunity._id }).toArray();
     const mongoChannelIds = mongoChannels.map(c => c._id);
     const mongoMessages = mongoChannelIds.length > 0
         ? await db.collection('messages').find({ channel: { $in: mongoChannelIds } }).toArray()
@@ -441,8 +447,12 @@ export async function migrateCommunityToFirestore(communityId: string) {
     console.log(`[MIGRATION_LOG] Found ${mongoMessages.length} messages to migrate.`);
 
     for (const message of mongoMessages) {
-        const senderMongoId = message.user?.toString();
-        if (!senderMongoId) continue;
+        // Correctly identify the sender ID from either 'user' or 'senderId' field
+        const senderMongoId = (message.user || message.senderId)?.toString();
+        if (!senderMongoId) {
+            console.warn(`[MIGRATION_WARN] Skipping message ID ${message._id} due to missing sender ID.`);
+            continue;
+        }
 
         const migratedUser = uidMap.get(senderMongoId);
         if (migratedUser) {
