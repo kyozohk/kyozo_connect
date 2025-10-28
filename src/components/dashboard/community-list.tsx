@@ -169,7 +169,7 @@ export function CommunityList({
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel onClick={() => setCommunityToExport(null)}>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleExport}>
+                    <AlertDialogAction onClick={handleExport} disabled={exportingId !== null}>
                         {exportingId ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Exporting...</> : "Confirm Export"}
                     </AlertDialogAction>
                 </AlertDialogFooter>
