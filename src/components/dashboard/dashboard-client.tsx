@@ -94,9 +94,9 @@ export function DashboardClient({
                     </Button>
                 </Link>
             ) : (
-                <Link href="/fire">
+                 <Link href="/inbox2">
                     <Button>
-                        Go to Destination Firestore
+                        Go to Fast Inbox
                         <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                 </Link>
