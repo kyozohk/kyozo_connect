@@ -58,7 +58,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   ];
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen w-full overflow-hidden">
        <Sidebar>
         <SidebarHeader>
             <div className="flex items-center justify-between">
