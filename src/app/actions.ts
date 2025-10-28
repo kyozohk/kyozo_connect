@@ -198,15 +198,19 @@ export async function migrateCommunityToFirestore(communityId: string) {
   const adminDb = await getAdminDb();
   try {
     const db = await getDb();
+    
+    const rawMongoCommunity = await db.collection('communities').findOne({ _id: new ObjectId(communityId) });
+    if (!rawMongoCommunity) throw new Error('Community not found in MongoDB');
+
+    // ** SANITIZE THE DATA **
+    // This is the key fix: convert the entire object to a clean JSON-serializable object
+    const mongoCommunity = JSON.parse(JSON.stringify(rawMongoCommunity));
 
     // 1. Get all users from MongoDB to create a comprehensive map
     const allMongoUsers = await db.collection('users').find({}).toArray();
     const mongoUserMap = new Map(allMongoUsers.map(u => [u._id.toString(), u]));
 
     // 2. Get specific community and its direct members
-    const mongoCommunity = await db.collection('communities').findOne({ _id: new ObjectId(communityId) });
-    if (!mongoCommunity) throw new Error('Community not found in MongoDB');
-    
     const memberMongoIds = (mongoCommunity.usersList || []).map((u: any) => u.userId.toString());
     const usersToMigrate = memberMongoIds.map(id => mongoUserMap.get(id)).filter(Boolean);
 
@@ -251,14 +255,14 @@ export async function migrateCommunityToFirestore(communityId: string) {
     // 4. Migrate Community
     const firestoreCommunityRef = adminDb.collection('communities').doc(communityId);
     
-    // Explicitly remove fields that are ObjectIds or are being replaced by the new structure
+    // Explicitly remove fields that are being replaced by the new structure
     const { 
         _id, 
         usersList, 
         communityHandles, 
         owner, 
         createdBy,
-        updatedBy, // This field was causing the error
+        updatedBy,
         ...restOfCommunityData 
     } = mongoCommunity;
 
@@ -331,5 +335,6 @@ export async function migrateCommunityToFirestore(communityId: string) {
     return { success: false, message: error.message || 'An unknown error occurred during migration.' };
   }
 }
+
 
 
