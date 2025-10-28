@@ -252,6 +252,7 @@ export async function getCommunityExportData(communityId: string, onStep: (step:
           userId: `firebase-uid-placeholder-${user.email}`,
           role: role,
           joinedAt: joinedAt ? new Date(joinedAt) : new Date(),
+          phoneNumber: user.phoneNumber, // Make sure phoneNumber is included
           ...restOfUser,
         };
     });
@@ -337,6 +338,7 @@ export async function migrateCommunityToFirestore(communityId: string) {
           await adminAuth.updateUser(firebaseUser.uid, {
               displayName: user.fullName || user.displayName || user.email,
               photoURL: user.profileImage || user.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(user.fullName || user.displayName || user.email)}`,
+              phoneNumber: user.phoneNumber, // Ensure phone number is updated in Auth
            });
         } catch (e: any) {
           if (e.code === 'auth/user-not-found') {
@@ -346,6 +348,7 @@ export async function migrateCommunityToFirestore(communityId: string) {
               emailVerified: true,
               displayName: user.fullName || user.displayName || user.email,
               photoURL: user.profileImage || user.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(user.fullName || user.displayName || user.email)}`,
+              phoneNumber: user.phoneNumber, // Ensure phone number is created in Auth
             });
           } else {
              throw e; // Re-throw other auth errors
@@ -363,7 +366,7 @@ export async function migrateCommunityToFirestore(communityId: string) {
         const userRef = adminDb.collection('users').doc(firebaseUser.uid);
         batch.set(userRef, firestoreUserProfile, { merge: true });
 
-        return { mongoId: user._id.toString(), firebaseUid: firebaseUser.uid, isNewUser };
+        return { mongoId: user._id.toString(), firebaseUid: firebaseUser.uid, isNewUser, phoneNumber: user.phoneNumber };
 
       } catch (e) {
         console.error(`[MIGRATION_ERROR] Failed to migrate user ${user.email} (MongoID: ${user._id}):`, e);
@@ -371,7 +374,7 @@ export async function migrateCommunityToFirestore(communityId: string) {
       }
     });
 
-    const migratedUsersResults = (await Promise.all(userMigrationPromises)).filter((res): res is { mongoId: string; firebaseUid: string; isNewUser: boolean; } => res !== null);
+    const migratedUsersResults = (await Promise.all(userMigrationPromises)).filter((res): res is { mongoId: string; firebaseUid: string; isNewUser: boolean; phoneNumber: string; } => res !== null);
     const uidMap = new Map(migratedUsersResults.map(u => [u.mongoId, u]));
 
     // ** Step 5: Migrate Community
@@ -420,6 +423,7 @@ export async function migrateCommunityToFirestore(communityId: string) {
                   userId: migratedUser.firebaseUid,
                   role: role,
                   joinedAt: joinedAt ? new Date(joinedAt) : FieldValue.serverTimestamp(),
+                  phoneNumber: migratedUser.phoneNumber // Add phoneNumber to the membership document
                 };
 
                 if (migratedUser.isNewUser) {
@@ -491,3 +495,5 @@ export async function migrateCommunityToFirestore(communityId: string) {
     };
   }
 }
+
+    

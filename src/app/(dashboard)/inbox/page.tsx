@@ -2,16 +2,17 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Community, Member } from '@/types';
 import { CommunityList } from '@/components/dashboard/community-list';
 import { MemberList } from '@/components/dashboard/member-list';
 import { MessageList } from '@/components/dashboard/message-list';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
-import { getCommunities, getMembers } from '@/app/actions';
+import { getFirestoreCommunities } from '@/app/fire/actions';
 
 export default function InboxPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const updateTimeout = useRef<NodeJS.Timeout | null>(null);
 
@@ -35,7 +36,7 @@ export default function InboxPage() {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 
   useEffect(() => {
-    getCommunities().then(data => {
+    getFirestoreCommunities().then(data => {
         setCommunities(data);
         setLoading(false);
     });
@@ -87,13 +88,13 @@ export default function InboxPage() {
   }, []);
 
   const selectedCommunity = communities.find(c => c.id === selectedCommunityId);
-  const dataSource = 'mongodb';
+  const dataSource = 'firestore';
 
   return (
     <div className="flex h-full flex-col bg-background">
       <main className="flex-1 overflow-hidden">
         <ResizablePanelGroup direction="horizontal" className="h-full w-full">
-          <ResizablePanel defaultSize={35} minSize={20} maxSize={45}>
+          <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
             <CommunityList
               communities={communities}
               selectedCommunityId={selectedCommunityId}
@@ -102,7 +103,7 @@ export default function InboxPage() {
             />
           </ResizablePanel>
           <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+          <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
             <MemberList 
               key={`${dataSource}-${selectedCommunityId}`}
               communityId={selectedCommunityId}
@@ -112,7 +113,7 @@ export default function InboxPage() {
               />
           </ResizablePanel>
           <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={45} minSize={30}>
+          <ResizablePanel defaultSize={50} minSize={30}>
              <MessageList 
                 key={`${dataSource}-${selectedCommunityId}-${selectedMember?.id}`}
                 communityId={selectedCommunityId} 
@@ -126,3 +127,5 @@ export default function InboxPage() {
     </div>
   );
 }
+
+    
