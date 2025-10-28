@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -12,7 +13,7 @@ export default function Home() {
   useEffect(() => {
     if (!loading) {
       if (user) {
-        router.replace('/inbox');
+        router.replace('/analytics');
       } else {
         router.replace('/login');
       }

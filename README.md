@@ -47,3 +47,17 @@ To support a multi-tenant model where any user can create and manage communities
   - e.g., `communities/{communityId}/messages/{messageId}`
 
 This structure is highly scalable and simplifies queries for fetching members, communities, and roles efficiently.
+
+
+now let us land the user in a dashboard which has a side bar with following route icon nav item
+
+1. Analytics - Defatul route, show the cards for summary of Total Communities, Total Mmbers, Total Messages
+2. Migrate - where we will move our current landing route /
+3. Firebase - where will move our current /fire route
+4. Subscription - where we will keep credit card info
+5. Settings - for timezone, etc
+6. Team - where will invite other team members
+
+at the bottom of show the user icon, below it user name or email and below that logout icon and text
+
+Side bar could be made thinner or full width

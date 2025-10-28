@@ -4,15 +4,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Community, Member } from '@/types';
-import { UserNav } from './user-nav';
 import { CommunityList } from './community-list';
 import { MemberList } from './member-list';
 import { MessageList } from './message-list';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
-import packageJson from '../../../package.json';
 
 export type DataSource = 'mongodb' | 'firestore';
 
@@ -45,7 +40,6 @@ export function DashboardClient({
 
   const [selectedCommunityId, setSelectedCommunityId] = useState(getInitialCommunityId());
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
-  const appVersion = packageJson.version;
 
 
   const debouncedUpdateUrl = useCallback((newSearchParams: URLSearchParams) => {
@@ -93,34 +87,7 @@ export function DashboardClient({
   const isFire = dataSource === 'firestore';
 
   return (
-    <div className="flex h-screen flex-col bg-background">
-      <header className="flex h-16 items-center justify-between border-b px-4 lg:px-6">
-         <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold tracking-tight text-primary">
-              KyozoConnect 
-              <span className="ml-2 text-xs font-mono text-muted-foreground align-middle">v{appVersion}</span>
-              <span className="text-sm font-normal text-muted-foreground">{isFire ? '🔥' : '🧊'}</span>
-            </h1>
-         </div>
-        <div className="flex items-center gap-4">
-            {isFire ? (
-                <Link href="/inbox">
-                    <Button variant="outline">
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Source Mongo
-                    </Button>
-                </Link>
-            ) : (
-                 <Link href="/inbox2">
-                    <Button>
-                        Go to Fast Inbox
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                </Link>
-            )}
-            <UserNav />
-        </div>
-      </header>
+    <div className="flex h-[calc(100vh-theme(spacing.16))] flex-col bg-background">
       <main className="flex-1 overflow-hidden">
         <ResizablePanelGroup direction="horizontal" className="h-full w-full">
           <ResizablePanel defaultSize={35} minSize={20} maxSize={45}>
