@@ -2,7 +2,7 @@
 import { Community } from "@/types";
 import Image from "next/image";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { LayoutGrid, Users, MapPin, Globe, Edit, UserPlus, Send } from "lucide-react";
+import { LayoutGrid, Users, MapPin, Globe, Edit, UserPlus, Send, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -59,10 +59,13 @@ export function CommunityHeader({ community }: CommunityHeaderProps) {
                             <span>{data.location}</span>
                         </div>
                      )}
-                     {data.tags && data.tags.length > 0 && (
-                        <Badge variant="secondary">{data.tags[0]}</Badge>
-                     )}
                 </div>
+
+                 <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {data.tags && Array.isArray(data.tags) && data.tags.map((tag: string, index: number) => (
+                        <Badge key={index} variant="secondary">{tag}</Badge>
+                    ))}
+                 </div>
 
                  <div className="mt-4 flex flex-wrap items-center gap-2">
                     <Button variant="outline" size="sm"><Edit className="h-4 w-4 mr-2" /> Edit Profile</Button>

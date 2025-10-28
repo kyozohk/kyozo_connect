@@ -77,7 +77,8 @@ export function MemberListClient({ initialMembers, selectionMode = 'none' }: Mem
     return sortedMembers.filter(member => 
         member.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         member.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        member.phoneNumber?.includes(searchTerm)
+        member.phoneNumber?.includes(searchTerm) ||
+        (member.data?.tags as string[])?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [sortedMembers, searchTerm]);
   
@@ -88,7 +89,7 @@ export function MemberListClient({ initialMembers, selectionMode = 'none' }: Mem
       <div className="flex items-center justify-between mb-4 gap-4">
         <div className="flex-grow">
           <Input
-            placeholder="Search members..."
+            placeholder="Search members or tags..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />

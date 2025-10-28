@@ -1,11 +1,11 @@
 
 'use client';
 import { Member } from '@/types';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MessageSquare, Edit, Trash2, Phone, CalendarIcon } from 'lucide-react';
+import { MessageSquare, Edit, Trash2, Phone, CalendarIcon, Tag } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Checkbox } from '../ui/checkbox';
 
@@ -23,6 +23,7 @@ interface MemberCardProps {
 export function MemberCard({ member, viewMode, selectionMode = 'none', isSelected, onSelect }: MemberCardProps) {
     const joinedAt = member.joinedAt ? format(parseISO(member.joinedAt), "MMM d, yyyy") : 'N/A';
     const fallback = member.displayName ? member.displayName.charAt(0).toUpperCase() : '?';
+    const tags = (member.data?.tags as string[]) || [];
 
     const ActionButtons = () => (
         <div className="flex items-center gap-1">
@@ -63,7 +64,9 @@ export function MemberCard({ member, viewMode, selectionMode = 'none', isSelecte
                     <div>
                         <Badge variant={member.role === 'owner' ? 'default' : 'secondary'} className="capitalize">{member.role}</Badge>
                     </div>
-                    <div className="text-sm text-muted-foreground">{member.phoneNumber}</div>
+                    <div className="text-sm text-muted-foreground flex flex-wrap gap-1">
+                        {tags.map(tag => <Badge key={tag} variant="outline">{tag}</Badge>)}
+                    </div>
                     <div className="text-sm text-muted-foreground">{joinedAt}</div>
                 </div>
                  {selectionMode === 'none' && <ActionButtons />}
@@ -72,13 +75,13 @@ export function MemberCard({ member, viewMode, selectionMode = 'none', isSelecte
     }
 
     return (
-        <Card onClick={handleCardClick} className="flex flex-col h-full hover:shadow-md transition-shadow cursor-pointer">
+        <Card onClick={handleCardClick} className="flex flex-col h-full hover:shadow-md transition-shadow cursor-pointer relative">
             {selectionMode !== 'none' && (
                 <div className="absolute top-2 right-2 z-10">
                     <Checkbox checked={isSelected} onCheckedChange={() => onSelect && onSelect(member.id)} />
                 </div>
             )}
-            <CardHeader className="flex flex-col items-center text-center">
+            <CardHeader className="flex flex-col items-center text-center pt-8">
                 <Avatar className="h-20 w-20 mb-2">
                     <AvatarImage src={member.photoURL} alt={member.displayName} />
                     <AvatarFallback>{fallback}</AvatarFallback>
@@ -87,7 +90,7 @@ export function MemberCard({ member, viewMode, selectionMode = 'none', isSelecte
                 <p className="text-sm text-muted-foreground">{member.email}</p>
                 <Badge variant={member.role === 'owner' ? 'default' : 'secondary'} className="capitalize mt-2">{member.role}</Badge>
             </CardHeader>
-            <CardContent className="flex-grow text-center">
+            <CardContent className="flex-grow space-y-2 text-center">
                 <div className="flex justify-center items-center gap-2 text-sm text-muted-foreground">
                     <Phone className="h-4 w-4" />
                     <span>{member.phoneNumber || 'No phone'}</span>
@@ -96,8 +99,13 @@ export function MemberCard({ member, viewMode, selectionMode = 'none', isSelecte
                     <CalendarIcon className="h-4 w-4" />
                     <span>Joined {joinedAt}</span>
                 </div>
-                {selectionMode === 'none' && <div className="mt-4"> <ActionButtons /> </div>}
+                 <div className="flex flex-wrap justify-center gap-1 mt-2">
+                    {tags.map(tag => <Badge key={tag} variant="outline">{tag}</Badge>)}
+                </div>
             </CardContent>
+             <CardFooter className="justify-center">
+                {selectionMode === 'none' && <ActionButtons />}
+            </CardFooter>
         </Card>
     );
 }
