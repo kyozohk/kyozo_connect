@@ -116,7 +116,7 @@ export function CommunityList({
             <div className="space-y-1 p-2">
             {filteredCommunities.length > 0 ? (
                 filteredCommunities.map((community) => (
-                <div key={community.id} className="group flex items-center rounded-md pr-2 hover:bg-muted"
+                <div key={community.id} className="group relative flex items-center rounded-md pr-2 hover:bg-muted"
                   onClick={() => onSelectCommunity(community.id)}>
                     <div
                         className={`w-full justify-start flex-grow h-auto py-2 px-2 flex items-center cursor-pointer rounded-md ${selectedCommunityId === community.id ? 'bg-secondary' : ''}`}
@@ -129,12 +129,13 @@ export function CommunityList({
                         </Avatar>
                         <div className="flex-1 flex justify-between items-center">
                           <span className="truncate text-sm">{community.name}</span>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center">
                             <Badge variant="outline">{community.memberCount}</Badge>
+                            <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                              <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 opacity-0 group-hover:opacity-100 flex-shrink-0"
+                                className="h-8 w-8 flex-shrink-0"
                                 onClick={(e) => { e.stopPropagation(); handleCopy(community); }}
                             >
                                 <ClipboardCopy className="h-4 w-4" />
@@ -142,12 +143,13 @@ export function CommunityList({
                              <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 opacity-0 group-hover:opacity-100 flex-shrink-0"
+                                className="h-8 w-8 flex-shrink-0"
                                 disabled={exportedStatus[community.id] || exportingId === community.id}
                                 onClick={(e) => { e.stopPropagation(); confirmExport(community); }}
                             >
                                 {exportingId === community.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <UploadCloud className="h-4 w-4" />}
                             </Button>
+                          </div>
                           </div>
                         </div>
                     </div>

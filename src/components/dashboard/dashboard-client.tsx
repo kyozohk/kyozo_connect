@@ -62,7 +62,7 @@ export function DashboardClient({
       </header>
       <main className="flex-1 overflow-hidden">
         <ResizablePanelGroup direction="horizontal" className="h-full w-full">
-          <ResizablePanel defaultSize={20} minSize={15} maxSize={25}>
+          <ResizablePanel defaultSize={35} minSize={20} maxSize={45}>
             <CommunityList
               communities={communities}
               selectedCommunityId={selectedCommunityId}
@@ -70,7 +70,7 @@ export function DashboardClient({
             />
           </ResizablePanel>
           <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={25} minSize={15} maxSize={30}>
+          <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
             <MemberList 
               key={selectedCommunityId} 
               communityId={selectedCommunityId}
@@ -79,7 +79,7 @@ export function DashboardClient({
               />
           </ResizablePanel>
           <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={55} minSize={30}>
+          <ResizablePanel defaultSize={45} minSize={30}>
              <MessageList 
                 key={`${selectedCommunityId}-${selectedMember?.id}`}
                 communityId={selectedCommunityId} 
