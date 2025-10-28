@@ -335,7 +335,7 @@ export function CommunityList({
                             <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                              <Button
                                 variant="ghost"
-                                size="sm"
+                                size="icon"
                                 className="h-10 w-10 flex-shrink-0"
                                 onClick={(e) => { e.stopPropagation(); handleCopy(JSON.stringify(community.data, null, 2), `Community data for "${community.name}" has been copied.`); }}
                             >
@@ -346,7 +346,7 @@ export function CommunityList({
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 w-10 flex-shrink-0"
-                                disabled={exportedStatusMap[community.id] || isProcessing || checkingExportStatus[community.id]}
+                                disabled={exportedStatusMap[community.id] || isProcessing}
                                 onClick={(e) => { e.stopPropagation(); confirmExport(community); }}
                             >
                                 {checkingExportStatus[community.id] ? <Loader2 className="h-5 w-5 animate-spin"/> : <UploadCloud className="h-6 w-6 text-primary" />}
