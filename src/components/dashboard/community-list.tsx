@@ -23,6 +23,7 @@ import { isCommunityExported, migrateCommunityToFirestore, getCommunityExportDat
 import { deleteCommunityFromFirestore } from '@/app/fire/actions';
 import { useRouter } from 'next/navigation';
 import { Textarea } from '../ui/textarea';
+import { cn } from '@/lib/utils';
 
 interface CommunityListProps {
   communities: Community[];
@@ -125,13 +126,14 @@ export function CommunityList({
 
             buffer += decoder.decode(value, { stream: true });
             
-            const parts = buffer.split('\n');
+            const parts = buffer.split('\n\n');
             buffer = parts.pop() || ''; // The last part might be incomplete
 
             for (const part of parts) {
-                if (part) {
+                if (part.startsWith('data: ')) {
                     try {
-                        const chunk = JSON.parse(part);
+                        const jsonString = part.substring(6);
+                        const chunk = JSON.parse(jsonString);
                         if (chunk.step) {
                             setDialogState(prevState => ({
                                 ...prevState,
@@ -428,7 +430,7 @@ export function CommunityList({
                                 disabled={exportedStatusMap[community.id] || isProcessing}
                                 onClick={(e) => { e.stopPropagation(); confirmExport(community); }}
                             >
-                                {checkingExportStatus[community.id] ? <Loader2 className="h-5 w-5 animate-spin"/> : <UploadCloud className="h-6 w-6 text-primary" />}
+                                <UploadCloud className="h-6 w-6 text-primary" />
                             </Button>
                             ) : (
                              <Button
