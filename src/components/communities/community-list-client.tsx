@@ -11,6 +11,7 @@ import { getPaginatedFirestoreCommunities } from '@/app/fire/actions';
 import { CommunityCard } from './community-card';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { CommunityCardSkeleton } from './community-card-skeleton';
 
 type ViewMode = 'grid' | 'list';
 
@@ -51,10 +52,10 @@ export function CommunityListClient({ initialCommunities, initialHasMore, pageSi
   }, [hasMore, isLoading, communities, pageSize, debouncedSearchTerm]);
 
   useEffect(() => {
-    if (inView) {
+    if (inView && !isLoading) {
       loadMoreCommunities();
     }
-  }, [inView, loadMoreCommunities]);
+  }, [inView, loadMoreCommunities, isLoading]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -98,23 +99,35 @@ export function CommunityListClient({ initialCommunities, initialHasMore, pageSi
         </div>
       </div>
 
-      {communities.length > 0 && (
+      {(isLoading && communities.length === 0) ? (
+        <div className={`grid gap-4 ${viewMode === 'grid' ? 'md:grid-cols-2' : 'grid-cols-1'}`}>
+            {Array.from({ length: 4 }).map((_, i) => (
+                <CommunityCardSkeleton key={i} viewMode={viewMode} />
+            ))}
+        </div>
+      ) : communities.length > 0 ? (
          <div className={`grid gap-4 ${viewMode === 'grid' ? 'md:grid-cols-2' : 'grid-cols-1'}`}>
             {communities.map((community) => (
                 <CommunityCard key={community.id} community={community} viewMode={viewMode} />
             ))}
         </div>
+      ) : (
+        <div className="text-center text-muted-foreground py-16">
+            <p>No communities found.</p>
+        </div>
       )}
 
-      {isLoading && (
-        <div className="flex justify-center items-center p-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      {isLoading && communities.length > 0 && (
+        <div className={`grid gap-4 mt-4 ${viewMode === 'grid' ? 'md:grid-cols-2' : 'grid-cols-1'}`}>
+           {Array.from({ length: 2 }).map((_, i) => (
+                <CommunityCardSkeleton key={i} viewMode={viewMode} />
+            ))}
         </div>
       )}
       
-      {!isLoading && communities.length === 0 && (
+      {!isLoading && communities.length === 0 && !hasMore && (
         <div className="text-center text-muted-foreground py-16">
-            <p>No communities found.</p>
+            <p>No communities found for your search.</p>
         </div>
       )}
 
