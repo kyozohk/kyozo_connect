@@ -191,6 +191,105 @@ export async function isCommunityExported(communityId: string): Promise<boolean>
   }
 }
 
+export async function getCommunityExportData(communityId: string) {
+  console.log(`[EXPORT_PREVIEW] Starting data fetch for communityId: ${communityId}`);
+  let exportPreviewData: any = {};
+  const PREVIEW_LIMIT = 100;
+
+  try {
+    const db = await getDb();
+
+    // Fetch community
+    const rawMongoCommunity = await db.collection('communities').findOne({ _id: new ObjectId(communityId) });
+    if (!rawMongoCommunity) {
+      throw new Error('Community not found in MongoDB');
+    }
+    const {
+        _id,
+        usersList,
+        communityHandles,
+        owner,
+        createdBy,
+        updatedBy,
+        ...restOfCommunityData
+    } = rawMongoCommunity;
+
+    const finalCommunityData = {
+        ...restOfCommunityData,
+        migratedAt: new Date(), // Using current date as a placeholder
+    };
+    exportPreviewData.community = finalCommunityData;
+
+    // Fetch members (with limit)
+    const memberMongoOids = (usersList && Array.isArray(usersList))
+      ? usersList.map((u: any) => u.userId).filter(Boolean)
+      : [];
+    const usersToMigrate = memberMongoOids.length > 0
+      ? await db.collection('users').find({ _id: { $in: memberMongoOids } }).limit(PREVIEW_LIMIT).toArray()
+      : [];
+
+    const ownerMongoId = owner?.toString();
+    const adminMongoIds = new Set((communityHandles || [])
+      .filter((h: any) => h.role === 'cl' || h.role === 'admin')
+      .map((h: any) => h.userId.toString()));
+    const userJoinDateMap = new Map((usersList || []).map((u: any) => [u.userId.toString(), u.joinedAt]));
+
+    exportPreviewData.memberships = usersToMigrate.map(user => {
+        const memberMongoId = user._id.toString();
+        let role: 'owner' | 'admin' | 'member' = 'member';
+        if (memberMongoId === ownerMongoId) {
+          role = 'owner';
+        } else if (adminMongoIds.has(memberMongoId)) {
+          role = 'admin';
+        }
+        const joinedAt = userJoinDateMap.get(memberMongoId);
+        return {
+          communityId: communityId,
+          userId: `firebase-uid-placeholder-${user.email}`,
+          role: role,
+          joinedAt: joinedAt ? new Date(joinedAt) : new Date(),
+        };
+    });
+
+    // Fetch messages (with limit, using efficient channel ID retrieval)
+    const mongoChannelIds = await db.collection('channels')
+        .find({ community: new ObjectId(communityId) })
+        .project({ _id: 1 })
+        .map(doc => doc._id)
+        .toArray();
+
+    const mongoMessages = mongoChannelIds.length > 0
+        ? await db.collection('messages').find({ channel: { $in: mongoChannelIds } }).sort({ createdAt: -1 }).limit(PREVIEW_LIMIT).toArray()
+        : [];
+
+    const userEmailMap = new Map(usersToMigrate.map(u => [u._id.toString(), u.email]));
+
+    exportPreviewData.messages = mongoMessages.map(message => {
+        const senderMongoId = message.user?.toString();
+        const senderEmail = userEmailMap.get(senderMongoId) || 'unknown-email';
+        return {
+            text: message.text,
+            createdAt: message.createdAt,
+            userId: `firebase-uid-placeholder-${senderEmail}`,
+        };
+    }).reverse(); // Reverse to show oldest first in the preview
+
+    return {
+        success: true,
+        message: `Preview generated for 1 community, ${exportPreviewData.memberships.length} members, and ${exportPreviewData.messages.length} messages (newest ${PREVIEW_LIMIT} each).`,
+        exportData: JSON.stringify(exportPreviewData, null, 2),
+    };
+
+  } catch (error: any) {
+    console.error('[EXPORT_PREVIEW_FAILED] An error occurred during data fetch:', error);
+    return {
+        success: false,
+        message: error.message || 'An unknown error occurred during data fetch.',
+        exportData: JSON.stringify({ error: error.stack || error.message }, null, 2),
+    };
+  }
+}
+
 export async function migrateCommunityToFirestore(communityId: string) {
   console.log(`[MIGRATION_START] Starting migration for communityId: ${communityId}`);
   const adminAuth = await getAdminAuth();

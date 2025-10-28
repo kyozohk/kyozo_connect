@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { Community } from '@/types';
@@ -20,7 +18,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { isCommunityExported, migrateCommunityToFirestore } from '@/app/actions';
+import { isCommunityExported, migrateCommunityToFirestore, getCommunityExportData } from '@/app/actions';
 import { deleteCommunityFromFirestore } from '@/app/fire/actions';
 import { useRouter } from 'next/navigation';
 import { Textarea } from '../ui/textarea';
@@ -99,13 +97,20 @@ export function CommunityList({
     });
   };
 
-  const confirmExport = (community: Community) => {
+  const confirmExport = async (community: Community) => {
     setDialogState({
         ...INITIAL_DIALOG_STATE,
         status: 'confirming-export',
         community: community,
         destination: process.env.NODE_ENV === 'production' ? 'Production' : 'Development',
+        message: 'Loading data for preview...'
     });
+    const result = await getCommunityExportData(community.id);
+    if (result.success) {
+      setDialogState(prevState => ({ ...prevState, exportedData: result.exportData, message: null }));
+    } else {
+      setDialogState(prevState => ({ ...prevState, status: 'export-error', message: result.message, exportedData: result.exportData }));
+    }
   }
 
   const confirmDelete = (community: Community) => {
@@ -188,20 +193,35 @@ export function CommunityList({
                         {status === 'export-error' && 'Migration Failed'}
                     </DialogTitle>
                     <DialogDescription>
-                         {status === 'confirming-export' && `Migrate "${community?.name}" and all its data to the ${destination} Firestore database.`}
+                         {status === 'confirming-export' && `Review the data below, then confirm to migrate "${community?.name}" to the ${destination} Firestore database.`}
                          {status === 'exporting' && `Exporting "${community?.name}" to the ${destination} environment. This may take a few minutes.`}
                          {status === 'export-success' && `Successfully migrated "${community?.name}" to Firestore.`}
                          {status === 'export-error' && `Something went wrong while migrating "${community?.name}".`}
                     </DialogDescription>
                 </DialogHeader>
-                 {status === 'confirming-export' && (
-                    <div className="py-4 text-sm">
-                        <p>This will perform the following actions:</p>
-                        <ul className="list-disc pl-5 mt-2 space-y-1 text-muted-foreground">
-                            <li>Register all {community?.memberCount} members in Firebase Authentication if they don't exist.</li>
-                            <li>Copy community details, memberships, and messages to Firestore.</li>
-                            <li>This action cannot be undone.</li>
-                        </ul>
+                 {(status === 'confirming-export' || status === 'export-success' || status === 'export-error') && exportedData && (
+                    <div className="relative py-4">
+                        <Textarea
+                            readOnly
+                            value={exportedData}
+                            className="h-64 text-xs font-mono bg-secondary border-secondary"
+                        />
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="absolute top-6 right-2 h-7 w-7"
+                            onClick={() => handleCopy(exportedData, "Exported JSON data copied.")}
+                        >
+                            <ClipboardCopy className="h-4 w-4"/>
+                        </Button>
+                    </div>
+                )}
+                {(status === 'confirming-export' && !exportedData) && (
+                    <div className="py-4 space-y-4">
+                        <div className="flex items-center justify-center h-24">
+                           <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                           <p className='ml-4 text-muted-foreground'>{message}</p>
+                        </div>
                     </div>
                 )}
                 {status === 'exporting' && (
@@ -211,36 +231,17 @@ export function CommunityList({
                         </div>
                     </div>
                 )}
-                 {(status === 'export-success' || status === 'export-error') && (
-                    <div className="py-4 space-y-4">
-                        {message && <div className="text-sm text-muted-foreground">{message}</div>}
-                        {exportedData && (
-                            <div className="relative">
-                                <Textarea
-                                    readOnly
-                                    value={exportedData}
-                                    className="h-48 text-xs font-mono bg-secondary border-secondary"
-                                />
-                                <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="absolute top-2 right-2 h-7 w-7"
-                                    onClick={() => handleCopy(exportedData, "Exported JSON data copied.")}
-                                >
-                                    <ClipboardCopy className="h-4 w-4"/>
-                                </Button>
-                            </div>
-                        )}
-                        {status === 'export-error' && message && (
-                             <div className="py-4 text-destructive text-sm bg-destructive/10 p-3 rounded-md">
-                                <p className="font-semibold">Error Details:</p>
-                                <p>{message}</p>
-                            </div>
-                        )}
+                 {(status === 'export-success' || status === 'export-error') && message && (
+                     <div className="text-sm text-muted-foreground py-2">{message}</div>
+                 )}
+                {status === 'export-error' && message && (
+                     <div className="py-2 text-destructive text-sm bg-destructive/10 p-3 rounded-md">
+                        <p className="font-semibold">Error Details:</p>
+                        <p>{message}</p>
                     </div>
                 )}
                 <DialogFooter>
-                    {status === 'confirming-export' && ( <> <Button variant="outline" onClick={closeDialog}>Cancel</Button> <Button onClick={handleExport}>Confirm & Migrate</Button> </> )}
+                    {status === 'confirming-export' && ( <> <Button variant="outline" onClick={closeDialog}>Cancel</Button> <Button onClick={handleExport} disabled={!exportedData}>Confirm & Migrate</Button> </> )}
                     {status === 'exporting' && ( <Button disabled> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Migrating... </Button> )}
                     {status === 'export-success' && ( <div className='flex w-full justify-between'><Button variant="outline" onClick={closeDialog}>Close</Button> <Button onClick={() => router.push('/fire')}>Go to Destination <ArrowRight className="ml-2 h-4 w-4" /></Button></div> )}
                     {status === 'export-error' && ( <Button onClick={closeDialog}>Close</Button> )}
