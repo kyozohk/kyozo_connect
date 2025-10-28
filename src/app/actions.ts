@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import { getDb } from '@/lib/mongodb';
@@ -359,8 +358,10 @@ export async function migrateCommunityToFirestore(communityId: string) {
           }
         }
         
-        // Prepare user profile data for Firestore `users` collection
-        const { _id, __v, firebaseUid, ...restOfUser } = user;
+        // Sanitize the entire user object for Firestore by removing ObjectId types
+        const sanitizedUser = JSON.parse(JSON.stringify(user));
+        const { _id, __v, ...restOfUser } = sanitizedUser;
+
         const firestoreUserProfile = {
           ...restOfUser,
           migratedAt: FieldValue.serverTimestamp(),
@@ -379,13 +380,15 @@ export async function migrateCommunityToFirestore(communityId: string) {
       }
     });
 
-    const migratedUsersResults = (await Promise.all(userMigrationPromises)).filter(Boolean);
-    const uidMap = new Map(migratedUsersResults.map(u => [u!.mongoId, u!]));
+    const migratedUsersResults = (await Promise.all(userMigrationPromises)).filter((res): res is { mongoId: string; firebaseUid: string; isNewUser: boolean; } => res !== null);
+    const uidMap = new Map(migratedUsersResults.map(u => [u.mongoId, u]));
     console.log(`[MIGRATION_LOG] Successfully prepared ${uidMap.size} users for migration (Auth & Firestore profiles).`);
 
     // ** Step 5: Migrate Community
     const firestoreCommunityRef = adminDb.collection('communities').doc(communityId);
     
+    // Sanitize the community data before setting it
+    const sanitizedCommunity = JSON.parse(JSON.stringify(rawMongoCommunity));
     const { 
         _id, 
         usersList, 
@@ -394,25 +397,28 @@ export async function migrateCommunityToFirestore(communityId: string) {
         createdBy,
         updatedBy,
         ...restOfCommunityData 
-    } = rawMongoCommunity;
+    } = sanitizedCommunity;
 
     const finalCommunityData = {
         ...restOfCommunityData,
         migratedAt: FieldValue.serverTimestamp(),
     };
-    exportedData = { community: JSON.parse(JSON.stringify(finalCommunityData)), memberships: [], messages: [] };
-
+    
     batch.set(firestoreCommunityRef, finalCommunityData);
     console.log(`[MIGRATION_LOG] Community document "${rawMongoCommunity.name}" added to batch.`);
+    
+    // Prepare exportedData after sanitizing
+    exportedData = { community: JSON.parse(JSON.stringify(finalCommunityData)), memberships: [], messages: [] };
+
 
     // ** Step 6: Migrate Memberships
-    const ownerMongoId = owner?.toString();
-    const adminMongoIds = new Set((communityHandles || [])
+    const ownerMongoId = rawMongoCommunity.owner?.toString();
+    const adminMongoIds = new Set((rawMongoCommunity.communityHandles || [])
       .filter((h: any) => h.role === 'cl' || h.role === 'admin')
       .map((h: any) => h.userId.toString()));
 
-    if (usersList && Array.isArray(usersList)) {
-        for (const userListItem of usersList) {
+    if (rawMongoCommunity.usersList && Array.isArray(rawMongoCommunity.usersList)) {
+        for (const userListItem of rawMongoCommunity.usersList) {
             const memberMongoId = userListItem.userId?.toString();
             if (!memberMongoId) continue;
 
@@ -505,4 +511,3 @@ export async function migrateCommunityToFirestore(communityId: string) {
     };
   }
 }
-
