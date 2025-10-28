@@ -41,3 +41,7 @@ export type RawMessage = {
 }
 
 export interface AppUser extends FirebaseUser {}
+
+export interface CommunityWithMembers extends Community {
+  members: Member[];
+}
