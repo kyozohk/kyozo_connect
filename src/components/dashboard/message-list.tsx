@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { getMessagesForMember, summarizeMessages } from '@/app/actions';
-import { getFirestoreMessagesForMember } from '@/app/fire/actions';
-import { useAuth } from '@/hooks/use-auth';
+import { useUser, useFirestore, useCollection } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
 import { Message, Member } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -29,38 +29,50 @@ export function MessageList({ communityId, communityName, member, dataSource }: 
   const [searchQuery, setSearchQuery] = useState('');
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
-  const { user } = useAuth();
+  const { user } = useUser();
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const currentMemberId = useRef<string | null | undefined>(null);
+  
+  const firestore = useFirestore();
+  const messagesQuery = useMemo(() => {
+    if (!firestore || !communityId || dataSource !== 'firestore') return null;
+    return query(collection(firestore, 'communities', communityId, 'messages'), orderBy('createdAt', 'desc'));
+  }, [firestore, communityId, dataSource]);
+
+  const { data: firestoreMessages, loading: firestoreLoading } = useCollection<Message>(messagesQuery);
 
   useEffect(() => {
-    // Only fetch messages if the member has changed OR if the datasource has changed for the same member
-    if (member?.id !== currentMemberId.current || dataSource) {
-        currentMemberId.current = member?.id;
-        if (!communityId || !member?.id) {
+    if (dataSource === 'firestore') {
+      if (firestoreMessages) {
+        // This is simplified. You might need to enrich this with sender data.
+        const messageData = firestoreMessages.map(doc => ({
+          id: doc.id,
+          text: doc.text,
+          createdAt: doc.createdAt?.toDate().toISOString(),
+          sender: { // This part needs real data
+              id: doc.userId,
+              uid: doc.userId,
+              displayName: 'Unknown',
+              photoURL: '',
+          },
+          data: doc,
+        }));
+        setMessages(messageData as Message[]);
+      }
+      setLoading(firestoreLoading);
+    } else {
+      if (!communityId || !member?.id) {
           setMessages([]);
           setLoading(false);
           return;
-        }
-        setLoading(true);
-        const fetcher = dataSource === 'firestore' ? getFirestoreMessagesForMember : getMessagesForMember;
-        fetcher(communityId, member.id)
-          .then((msgs) => {
-            setMessages(msgs);
-          })
-          .catch(err => {
-            console.error(err);
-            toast({
-              title: "Error",
-              description: "Could not load messages.",
-              variant: "destructive"
-            });
-          })
-          .finally(() => setLoading(false));
+      }
+      setLoading(true);
+      getMessagesForMember(communityId, member.id)
+        .then((msgs) => setMessages(msgs))
+        .finally(() => setLoading(false));
     }
-  }, [communityId, member, toast, dataSource]);
-  
+  }, [communityId, member, dataSource, firestoreMessages, firestoreLoading]);
+
   const handleSummarize = async () => {
     if (!user || messages.length === 0 || !member) return;
     setIsSummarizing(true);
@@ -123,7 +135,7 @@ export function MessageList({ communityId, communityName, member, dataSource }: 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="h-9"
-            disabled={!member}
+            disabled={!member && dataSource !== 'firestore'}
         />
       </div>
       <div className="flex-1 overflow-hidden">
@@ -162,7 +174,7 @@ export function MessageList({ communityId, communityName, member, dataSource }: 
                     <div className="flex items-baseline space-x-2">
                         <p className="text-sm font-medium">{message.sender.displayName}</p>
                         <p className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
+                            {message.createdAt ? formatDistanceToNow(new Date(message.createdAt), { addSuffix: true }) : ''}
                         </p>
                     </div>
                     <p className="text-sm text-foreground/90 whitespace-pre-wrap">{message.text}</p>

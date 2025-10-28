@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
+import { useUser } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,12 +12,12 @@ import { LoginButton } from '@/components/login-button';
 import { Separator } from '@/components/ui/separator';
 
 export default function LoginPage() {
-  const { user, loading } = useAuth();
+  const { user, loading } = useUser();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace('/inbox');
+      router.replace('/analytics');
     }
   }, [user, loading, router]);
 

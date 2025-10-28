@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { useAuth } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { upsertUser } from '@/app/actions';
@@ -13,8 +13,10 @@ export function LoginButton() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const auth = useAuth();
 
   const handleLogin = async () => {
+    if (!auth) return;
     setIsLoading(true);
     const provider = new GoogleAuthProvider();
     try {
@@ -27,7 +29,7 @@ export function LoginButton() {
           displayName: user.displayName!,
           photoURL: user.photoURL!,
         });
-        router.push('/inbox');
+        router.push('/analytics');
       }
     } catch (error) {
       console.error("Authentication error:", error);
@@ -43,7 +45,7 @@ export function LoginButton() {
   return (
     <Button
       onClick={handleLogin}
-      disabled={isLoading}
+      disabled={isLoading || !auth}
       className="w-full"
       size="lg"
     >

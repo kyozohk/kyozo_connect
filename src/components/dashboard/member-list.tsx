@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { getMembers } from '@/app/actions';
-import { getFirestoreMembers } from '@/app/fire/actions';
+import { useCollection, useFirestore } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 import { Member } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -39,42 +40,61 @@ export function MemberList({
   const [selectedMemberId, setSelectedMemberId] = useState<string | undefined>(initialSelectedMemberId);
   const { toast } = useToast();
 
-  const fetchAndSetMembers = useCallback(async (cId: string, memberIdToSelect?: string) => {
-    if (!cId) {
-      setMembers([]);
-      onSelectMember(null);
-      setSelectedMemberId(undefined);
-      return;
-    }
-    setLoading(true);
-    try {
-      const fetcher = dataSource === 'firestore' ? getFirestoreMembers : getMembers;
-      const fetchedMembers = await fetcher(cId);
-      setMembers(fetchedMembers);
-      
-      if (memberIdToSelect) {
-        const memberToSelect = fetchedMembers.find(m => m.id === memberIdToSelect);
-        onSelectMember(memberToSelect || null);
-        setSelectedMemberId(memberIdToSelect);
-      } else if (selectedMemberId && !fetchedMembers.some(m => m.id === selectedMemberId)) {
-        onSelectMember(null);
-        setSelectedMemberId(undefined);
-      }
-    } catch (error) {
-      console.error('Failed to fetch members:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Could not load members for this community.',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [onSelectMember, toast, selectedMemberId, dataSource]);
+  const firestore = useFirestore();
+  const membersQuery = useMemo(() => {
+    if (!firestore || !communityId || dataSource !== 'firestore') return null;
+    return query(collection(firestore, 'memberships'), where('communityId', '==', communityId));
+  }, [firestore, communityId, dataSource]);
+
+  const { data: firestoreMembers, loading: firestoreLoading } = useCollection<Member>(membersQuery);
 
   useEffect(() => {
-    fetchAndSetMembers(communityId, initialSelectedMemberId);
-  }, [communityId, initialSelectedMemberId, fetchAndSetMembers]);
+    if (dataSource === 'firestore') {
+      if (firestoreMembers) {
+        // Here you would typically map the membership doc to a full member object
+        // This might require another fetch to the `users` collection for each member
+        // For simplicity, we'll assume the membership doc has enough info or you'd enhance this
+        // This is a simplified version. A real app might need to fetch user profiles.
+        const memberData = firestoreMembers.map(doc => ({
+            id: doc.userId,
+            uid: doc.userId,
+            displayName: doc.displayName || 'Unknown',
+            photoURL: doc.photoURL || '',
+            email: doc.email || '',
+            role: doc.role || 'member',
+            phoneNumber: doc.phoneNumber || '',
+            joinedAt: doc.joinedAt?.toDate().toISOString(),
+            data: doc,
+        }));
+        setMembers(memberData as Member[]);
+      }
+      setLoading(firestoreLoading);
+    } else {
+      if (!communityId) {
+        setMembers([]);
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      getMembers(communityId)
+        .then(fetchedMembers => {
+          setMembers(fetchedMembers);
+          if (initialSelectedMemberId) {
+            const memberToSelect = fetchedMembers.find(m => m.id === initialSelectedMemberId);
+            onSelectMember(memberToSelect || null);
+          }
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [communityId, dataSource, firestoreMembers, firestoreLoading, initialSelectedMemberId, onSelectMember]);
+
+  useEffect(() => {
+    if (initialSelectedMemberId && members.length > 0) {
+      const memberToSelect = members.find(m => m.id === initialSelectedMemberId);
+      onSelectMember(memberToSelect || null);
+      setSelectedMemberId(initialSelectedMemberId);
+    }
+  }, [initialSelectedMemberId, members, onSelectMember]);
 
 
   const handleSelectMember = (member: Member) => {
