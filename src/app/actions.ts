@@ -207,24 +207,22 @@ export async function migrateCommunityToFirestore(communityId: string) {
     }
     console.log(`[MIGRATION_LOG] Found community "${rawMongoCommunity.name}" in MongoDB.`);
 
+    // ** BUG FIX: Get member ObjectIDs BEFORE sanitizing the community object **
+    const memberMongoOids = (rawMongoCommunity.usersList || []).map((u: any) => u.userId).filter(Boolean);
+    console.log(`[MIGRATION_LOG] Found 'usersList' with ${memberMongoOids.length} member ObjectIDs.`);
+    if (memberMongoOids.length === 0) {
+        console.warn(`[MIGRATION_WARN] The 'usersList' for community "${rawMongoCommunity.name}" is empty. No members or messages will be migrated.`);
+    }
+
+    // Fetch users from MongoDB using the correct ObjectIDs
+    const usersToMigrate = await db.collection('users').find({ _id: { $in: memberMongoOids } }).toArray();
+    console.log(`[MIGRATION_LOG] Matched ${usersToMigrate.length} users to migrate from the community's member list.`);
+    
     // ** SANITIZE THE DATA **
     const mongoCommunity = JSON.parse(JSON.stringify(rawMongoCommunity));
     console.log(`[MIGRATION_LOG] Community data sanitized.`);
 
-    // 1. Get member IDs from the community
-    const memberMongoIds = (mongoCommunity.usersList || []).map((u: any) => u.userId.toString());
-    console.log(`[MIGRATION_LOG] Found 'usersList' with ${memberMongoIds.length} members.`);
-    if (memberMongoIds.length === 0) {
-        console.warn(`[MIGRATION_WARN] The 'usersList' for community "${mongoCommunity.name}" is empty. No members or messages will be migrated.`);
-    }
-
-    // 2. Get all users from MongoDB to create a comprehensive map
-    const allMongoUsers = await db.collection('users').find({}).toArray();
-    const mongoUserMap = new Map(allMongoUsers.map(u => [u._id.toString(), u]));
-    console.log(`[MIGRATION_LOG] Fetched ${mongoUserMap.size} total users from MongoDB for mapping.`);
-
-    const usersToMigrate = memberMongoIds.map(id => mongoUserMap.get(id)).filter(Boolean);
-    console.log(`[MIGRATION_LOG] Matched ${usersToMigrate.length} users to migrate from the community's member list.`);
+    const memberMongoIds = usersToMigrate.map(u => u._id.toString());
 
     // 3. Register users in Firebase Auth and create mapping
     const userMigrationPromises = usersToMigrate.map(async (user) => {
@@ -358,3 +356,5 @@ export async function migrateCommunityToFirestore(communityId: string) {
     return { success: false, message: error.message || 'An unknown error occurred during migration.' };
   }
 }
+
+    
