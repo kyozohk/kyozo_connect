@@ -328,7 +328,7 @@ export async function migrateCommunityToFirestore(communityId: string) {
         batch.set(membershipRef, membershipData);
       }
     }
-    console.log(`[MIGRATION_LOG] Prepared ${memberMongoIds.length} membership documents for batch write.`);
+    console.log(`[MIGRATION_LOG] Prepared ${exportedData.memberships.length} of ${memberMongoIds.length} membership documents for batch write.`);
     
     // ** Step 8: Migrate Messages
     const mongoChannels = await db.collection('channels').find({ community: new ObjectId(communityId) }).toArray();
@@ -355,11 +355,11 @@ export async function migrateCommunityToFirestore(communityId: string) {
              console.warn(`[MIGRATION_WARN] Skipping message ID ${message._id} because sender ${senderMongoId} was not migrated.`);
         }
     }
-    console.log(`[MIGRATION_LOG] Prepared ${mongoMessages.length} message documents for batch write.`);
+    console.log(`[MIGRATION_LOG] Prepared ${exportedData.messages.length} message documents for batch write.`);
     
     await batch.commit();
 
-    const summaryMessage = `Migrated 1 community, ${memberMongoIds.length} members, and ${mongoMessages.length} messages.`;
+    const summaryMessage = `Migrated 1 community, ${exportedData.memberships.length} members, and ${exportedData.messages.length} messages.`;
     console.log(`[MIGRATION_SUCCESS] Batch commit successful. ${summaryMessage}`);
 
     return { 
