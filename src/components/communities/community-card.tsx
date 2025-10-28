@@ -1,12 +1,12 @@
-
 'use client';
 
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Users, MessagesSquare, CalendarIcon, LayoutGrid } from 'lucide-react';
+import { Users, MessagesSquare, CalendarIcon, LayoutGrid, Edit } from 'lucide-react';
 import { Community } from '@/types';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import { Button } from '../ui/button';
 
 type ViewMode = 'grid' | 'list';
 
@@ -44,10 +44,13 @@ export function CommunityCard({ community, viewMode }: CommunityCardProps) {
             <div className="flex-grow">
             <p className="font-semibold">{community.name}</p>
             </div>
-            <div className="flex items-center text-sm text-muted-foreground">
-            <Users className="h-4 w-4 mr-1" />
-            {community.memberCount}
+            <div className="flex items-center text-sm text-muted-foreground mr-4">
+                <Users className="h-4 w-4 mr-1" />
+                {community.memberCount}
             </div>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Edit className="h-4 w-4" />
+            </Button>
         </Card>
       </CardLink>
     );
