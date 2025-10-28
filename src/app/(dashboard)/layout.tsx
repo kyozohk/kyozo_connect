@@ -10,12 +10,13 @@ import { auth } from '@/lib/firebase';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Button } from '@/components/ui/button';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const { setOpen } = useSidebar();
+  const { setOpen, toggleSidebar } = useSidebar();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -61,15 +62,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen w-full overflow-hidden">
        <Sidebar>
         <SidebarHeader>
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 overflow-hidden">
-                    {/* Expanded Logo */}
-                    <Image src="/logo.png" alt="Kyozo Logo" width={100} height={28} className="group-data-[collapsible=icon]:hidden" />
-                    {/* Collapsed Icon */}
-                    <Image src="/favicon.png" alt="Kyozo Icon" width={28} height={28} className="hidden group-data-[collapsible=icon]:block" />
-                </div>
-                <SidebarTrigger />
-            </div>
+            <Button variant="ghost" className="h-auto p-0 w-full justify-start" onClick={toggleSidebar}>
+                {/* Expanded Logo */}
+                <Image src="/logo.png" alt="Kyozo Logo" width={120} height={34} className="group-data-[collapsible=icon]:hidden" />
+                {/* Collapsed Icon */}
+                <Image src="/favicon.png" alt="Kyozo Icon" width={34} height={34} className="hidden group-data-[collapsible=icon]:block" />
+            </Button>
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
