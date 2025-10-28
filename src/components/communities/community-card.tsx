@@ -26,7 +26,7 @@ export function CommunityCard({ community, viewMode }: CommunityCardProps) {
   const data = community.data as any;
 
   const CardLink = ({children}: {children: React.ReactNode}) => (
-    <Link href={`/dashboard/communities/${community.id}`} className="block h-full">
+    <Link href={`/communities/${community.id}`} className="block h-full">
         {children}
     </Link>
   )

@@ -26,7 +26,7 @@ export function CommunityNav({ communities, currentCommunityId }: CommunityNavPr
 
   const handleCommunityChange = (communityId: string) => {
     if (communityId !== currentCommunityId) {
-      router.push(`/dashboard/communities/${communityId}`);
+      router.push(`/communities/${communityId}`);
     }
   };
 

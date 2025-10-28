@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -56,9 +57,9 @@ export default function CommunitySlugLayout({ children }: { children: React.Reac
   }, [slug, user]);
 
   const navItems = [
-    { href: `/dashboard/communities/${slug}`, icon: LayoutDashboard, label: 'Overview' },
-    { href: `/dashboard/communities/${slug}/members`, icon: Users, label: 'Members' },
-    { href: `/dashboard/communities/${slug}/broadcast`, icon: Send, label: 'Broadcast' },
+    { href: `/communities/${slug}`, icon: LayoutDashboard, label: 'Overview' },
+    { href: `/communities/${slug}/members`, icon: Users, label: 'Members' },
+    { href: `/communities/${slug}/broadcast`, icon: Send, label: 'Broadcast' },
   ];
 
   return (

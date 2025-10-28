@@ -24,7 +24,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [user, loading, router]);
   
   useEffect(() => {
-      if (pathname.startsWith('/dashboard/communities/')) {
+      if (pathname.startsWith('/communities/')) {
         setOpen(false);
       } else {
         setOpen(true);
@@ -49,7 +49,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const navItems = [
     { href: '/analytics', icon: BarChart3, label: 'Analytics' },
-    { href: '/dashboard/communities', icon: LayoutGrid, label: 'Communities' },
+    { href: '/communities', icon: LayoutGrid, label: 'Communities' },
     { href: '/migrate', icon: DatabaseZap, label: 'Migrate' },
     { href: '/firebase', icon: Users, label: 'Firebase Data' },
     { href: '/subscription', icon: CreditCard, label: 'Subscription' },
