@@ -18,11 +18,13 @@ export type DataSource = 'mongodb' | 'firestore';
 
 export function DashboardClient({
   communities,
-  searchParams,
+  initialCommunityId,
+  initialMemberId,
   dataSource,
 }: {
   communities: Community[];
-  searchParams?: { [key: string]: string | string[] | undefined };
+  initialCommunityId?: string;
+  initialMemberId?: string;
   dataSource: DataSource;
 }) {
   const router = useRouter();
@@ -30,16 +32,10 @@ export function DashboardClient({
   const currentSearchParams = useSearchParams();
 
   const getInitialCommunityId = () => {
-    const communityIdFromParams = searchParams?.communityId;
-    if (typeof communityIdFromParams === 'string' && communities.some(c => c.id === communityIdFromParams)) {
-      return communityIdFromParams;
+    if (typeof initialCommunityId === 'string' && communities.some(c => c.id === initialCommunityId)) {
+      return initialCommunityId;
     }
     return '';
-  };
-
-  const getInitialMemberId = () => {
-    const memberIdFromParams = searchParams?.memberId;
-    return typeof memberIdFromParams === 'string' ? memberIdFromParams : undefined;
   };
 
   const [selectedCommunityId, setSelectedCommunityId] = useState(getInitialCommunityId());
@@ -124,7 +120,7 @@ export function DashboardClient({
               key={`${dataSource}-${selectedCommunityId}`}
               communityId={selectedCommunityId}
               onSelectMember={handleSelectMember}
-              initialSelectedMemberId={getInitialMemberId()}
+              initialSelectedMemberId={initialMemberId}
               dataSource={dataSource}
               />
           </ResizablePanel>

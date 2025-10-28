@@ -11,11 +11,14 @@ export default async function InboxPage({
   searchParams?: { [key: string]: string | string[] | undefined };
 }) {
   const communities: Community[] = await getCommunities();
+  const communityId = searchParams?.communityId as string || undefined;
+  const memberId = searchParams?.memberId as string || undefined;
 
   return (
     <DashboardClient
       communities={communities}
-      searchParams={searchParams}
+      initialCommunityId={communityId}
+      initialMemberId={memberId}
       dataSource="mongodb"
     />
   );
