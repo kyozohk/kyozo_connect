@@ -258,6 +258,7 @@ export async function migrateCommunityToFirestore(communityId: string) {
         communityHandles, 
         owner, 
         createdBy,
+        updatedBy, // This field was causing the error
         ...restOfCommunityData 
     } = mongoCommunity;
 
@@ -330,4 +331,5 @@ export async function migrateCommunityToFirestore(communityId: string) {
     return { success: false, message: error.message || 'An unknown error occurred during migration.' };
   }
 }
+
 
