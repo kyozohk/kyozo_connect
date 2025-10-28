@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Community, Member } from '@/types';
 import { UserNav } from './user-nav';
@@ -18,19 +18,31 @@ export type DataSource = 'mongodb' | 'firestore';
 
 export function DashboardClient({
   communities,
-  initialSelectedCommunityId,
-  initialSelectedMemberId,
+  searchParams,
   dataSource,
 }: {
   communities: Community[];
-  initialSelectedCommunityId: string;
-  initialSelectedMemberId?: string;
+  searchParams?: { [key: string]: string | string[] | undefined };
   dataSource: DataSource;
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const [selectedCommunityId, setSelectedCommunityId] = useState(initialSelectedCommunityId);
+  const currentSearchParams = useSearchParams();
+
+  const getInitialCommunityId = () => {
+    const communityIdFromParams = searchParams?.communityId;
+    if (typeof communityIdFromParams === 'string' && communities.some(c => c.id === communityIdFromParams)) {
+      return communityIdFromParams;
+    }
+    return '';
+  };
+
+  const getInitialMemberId = () => {
+    const memberIdFromParams = searchParams?.memberId;
+    return typeof memberIdFromParams === 'string' ? memberIdFromParams : undefined;
+  };
+
+  const [selectedCommunityId, setSelectedCommunityId] = useState(getInitialCommunityId());
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const appVersion = packageJson.version;
 
@@ -47,7 +59,7 @@ export function DashboardClient({
 
   const handleSelectMember = useCallback((member: Member | null) => {
     setSelectedMember(member);
-    const newSearchParams = new URLSearchParams(searchParams.toString());
+    const newSearchParams = new URLSearchParams(currentSearchParams.toString());
     if (selectedCommunityId) {
       newSearchParams.set('communityId', selectedCommunityId);
     } else {
@@ -61,7 +73,7 @@ export function DashboardClient({
     }
     
     router.replace(`${pathname}?${newSearchParams.toString()}`);
-  }, [router, searchParams, selectedCommunityId, pathname]);
+  }, [router, currentSearchParams, selectedCommunityId, pathname]);
 
   const selectedCommunity = communities.find(c => c.id === selectedCommunityId);
 
@@ -112,7 +124,7 @@ export function DashboardClient({
               key={`${dataSource}-${selectedCommunityId}`}
               communityId={selectedCommunityId}
               onSelectMember={handleSelectMember}
-              initialSelectedMemberId={initialSelectedMemberId}
+              initialSelectedMemberId={getInitialMemberId()}
               dataSource={dataSource}
               />
           </ResizablePanel>
