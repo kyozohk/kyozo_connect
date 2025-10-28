@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -8,7 +7,7 @@ import { useSidebar } from '@/components/ui/sidebar';
 import { CommunityNav } from '@/components/communities/community-nav';
 import { Community } from '@/types';
 import { getFirestoreCommunities } from '@/app/fire/actions';
-import { LayoutDashboard, Users, Send } from 'lucide-react';
+import { LayoutDashboard, Users, Send, Inbox } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -43,6 +42,7 @@ export default function CommunitySlugLayout({ children }: { children: React.Reac
     { href: `/communities/${slug}`, icon: LayoutDashboard, label: 'Overview' },
     { href: `/communities/${slug}/members`, icon: Users, label: 'Members' },
     { href: `/communities/${slug}/broadcast`, icon: Send, label: 'Broadcast' },
+    { href: `/communities/${slug}/inbox`, icon: Inbox, label: 'Inbox' },
   ];
 
   return (
