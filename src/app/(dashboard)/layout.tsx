@@ -64,9 +64,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 overflow-hidden">
                     {/* Expanded Logo */}
-                    <Image src="https://i.imgur.com/83y2F7S.png" alt="Kyozo Logo" width={100} height={28} className="group-data-[collapsible=icon]:hidden" />
+                    <Image src="/logo.png" alt="Kyozo Logo" width={100} height={28} className="group-data-[collapsible=icon]:hidden" />
                     {/* Collapsed Icon */}
-                    <Image src="https://i.imgur.com/w9oNM2y.png" alt="Kyozo Icon" width={28} height={28} className="hidden group-data-[collapsible=icon]:block" />
+                    <Image src="/favicon.png" alt="Kyozo Icon" width={28} height={28} className="hidden group-data-[collapsible=icon]:block" />
                 </div>
                 <SidebarTrigger />
             </div>
