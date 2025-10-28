@@ -331,14 +331,18 @@ export async function migrateCommunityToFirestore(communityId: string) {
         let firebaseUser: UserRecord;
         let isNewUser = false;
         
+        const displayName = user.fullName || user.displayName || user.email;
+        const photoURL = user.profileImage || user.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(displayName)}`;
+        const phoneNumber = user.phoneNumber || null; // Ensure it's null if not present
+
         try {
           // Find existing user by email
           firebaseUser = await adminAuth.getUserByEmail(user.email);
           // Update existing user's info
           await adminAuth.updateUser(firebaseUser.uid, {
-              displayName: user.fullName || user.displayName || user.email,
-              photoURL: user.profileImage || user.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(user.fullName || user.displayName || user.email)}`,
-              phoneNumber: user.phoneNumber, // Ensure phone number is updated in Auth
+              displayName,
+              photoURL,
+              phoneNumber,
            });
         } catch (e: any) {
           if (e.code === 'auth/user-not-found') {
@@ -346,27 +350,34 @@ export async function migrateCommunityToFirestore(communityId: string) {
             firebaseUser = await adminAuth.createUser({
               email: user.email,
               emailVerified: true,
-              displayName: user.fullName || user.displayName || user.email,
-              photoURL: user.profileImage || user.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(user.fullName || user.displayName || user.email)}`,
-              phoneNumber: user.phoneNumber, // Ensure phone number is created in Auth
+              displayName,
+              photoURL,
+              phoneNumber,
             });
           } else {
              throw e; // Re-throw other auth errors
           }
         }
         
-        const sanitizedUser = JSON.parse(JSON.stringify(user));
-        const { _id, __v, firebaseUid, ...restOfUser } = sanitizedUser;
-
-        const firestoreUserProfile = {
-          ...restOfUser,
+        // Explicitly map fields for the Firestore user profile
+        const firestoreUserProfile: { [key: string]: any } = {
+          displayName: displayName,
+          email: user.email,
+          photoURL: photoURL,
+          fullName: user.fullName,
           migratedAt: FieldValue.serverTimestamp(),
+          // Add other fields from the mongo user doc as needed
+          // For example:
+          // someOtherField: user.someOtherField
         };
+        if (phoneNumber) {
+            firestoreUserProfile.phoneNumber = phoneNumber;
+        }
 
         const userRef = adminDb.collection('users').doc(firebaseUser.uid);
         batch.set(userRef, firestoreUserProfile, { merge: true });
 
-        return { mongoId: user._id.toString(), firebaseUid: firebaseUser.uid, isNewUser, phoneNumber: user.phoneNumber };
+        return { mongoId: user._id.toString(), firebaseUid: firebaseUser.uid, isNewUser, phoneNumber: phoneNumber };
 
       } catch (e) {
         console.error(`[MIGRATION_ERROR] Failed to migrate user ${user.email} (MongoID: ${user._id}):`, e);
@@ -374,7 +385,7 @@ export async function migrateCommunityToFirestore(communityId: string) {
       }
     });
 
-    const migratedUsersResults = (await Promise.all(userMigrationPromises)).filter((res): res is { mongoId: string; firebaseUid: string; isNewUser: boolean; phoneNumber: string; } => res !== null);
+    const migratedUsersResults = (await Promise.all(userMigrationPromises)).filter((res): res is { mongoId: string; firebaseUid: string; isNewUser: boolean; phoneNumber: string | null; } => res !== null);
     const uidMap = new Map(migratedUsersResults.map(u => [u.mongoId, u]));
 
     // ** Step 5: Migrate Community
@@ -418,13 +429,17 @@ export async function migrateCommunityToFirestore(communityId: string) {
 
                 const joinedAt = userListItem.joinedAt;
                 
-                const membershipData: any = {
+                const membershipData: { [key: string]: any } = {
                   communityId: communityId,
                   userId: migratedUser.firebaseUid,
                   role: role,
                   joinedAt: joinedAt ? new Date(joinedAt) : FieldValue.serverTimestamp(),
-                  phoneNumber: migratedUser.phoneNumber // Add phoneNumber to the membership document
                 };
+
+                // Add phoneNumber to the membership document if it exists
+                if (migratedUser.phoneNumber) {
+                    membershipData.phoneNumber = migratedUser.phoneNumber;
+                }
 
                 if (migratedUser.isNewUser) {
                   membershipData.passwordInitialized = false;
@@ -495,5 +510,3 @@ export async function migrateCommunityToFirestore(communityId: string) {
     };
   }
 }
-
-    
