@@ -8,6 +8,9 @@ import { CommunityList } from './community-list';
 import { MemberList } from './member-list';
 import { MessageList } from './message-list';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 export type DataSource = 'mongodb' | 'firestore';
 
@@ -56,13 +59,34 @@ export function DashboardClient({
 
   const selectedCommunity = communities.find(c => c.id === selectedCommunityId);
 
+  const isFire = dataSource === 'firestore';
+
   return (
     <div className="flex h-screen flex-col bg-background">
       <header className="flex h-16 items-center justify-between border-b px-4 lg:px-6">
-        <h1 className="text-xl font-bold tracking-tight text-primary">
-          KyozoConnect <span className="text-sm font-normal text-muted-foreground">{dataSource === 'firestore' ? '🔥' : '🧊'}</span>
-        </h1>
-        <UserNav />
+         <div className="flex items-center gap-4">
+            <h1 className="text-xl font-bold tracking-tight text-primary">
+            KyozoConnect <span className="text-sm font-normal text-muted-foreground">{isFire ? '🔥' : '🧊'}</span>
+            </h1>
+         </div>
+        <div className="flex items-center gap-4">
+            {isFire ? (
+                <Link href="/inbox">
+                    <Button variant="outline">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back to Source Mongo
+                    </Button>
+                </Link>
+            ) : (
+                <Link href="/fire">
+                    <Button>
+                        Go to Destination Firestore
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                </Link>
+            )}
+            <UserNav />
+        </div>
       </header>
       <main className="flex-1 overflow-hidden">
         <ResizablePanelGroup direction="horizontal" className="h-full w-full">
