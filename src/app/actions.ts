@@ -1,5 +1,3 @@
-
-
 'use server';
 
 import { getDb } from '@/lib/mongodb';
