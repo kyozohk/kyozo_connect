@@ -10,6 +10,16 @@ import { useState, useEffect } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Users, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { isCommunityExported, migrateCommunityToFirestore } from '@/app/actions';
 
 interface CommunityListProps {
@@ -27,6 +37,8 @@ export function CommunityList({
   const [searchQuery, setSearchQuery] = useState('');
   const [exportedStatus, setExportedStatus] = useState<Record<string, boolean>>({});
   const [exportingId, setExportingId] = useState<string | null>(null);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [communityToExport, setCommunityToExport] = useState<Community | null>(null);
 
   useEffect(() => {
     const checkExportStatus = async () => {
@@ -50,16 +62,25 @@ export function CommunityList({
     });
   };
 
-  const handleExport = async (communityId: string) => {
-    setExportingId(communityId);
+  const confirmExport = (community: Community) => {
+    setCommunityToExport(community);
+    setShowExportDialog(true);
+  }
+
+  const handleExport = async () => {
+    if (!communityToExport) return;
+
+    setExportingId(communityToExport.id);
+    setShowExportDialog(false);
+
     try {
-      const result = await migrateCommunityToFirestore(communityId);
+      const result = await migrateCommunityToFirestore(communityToExport.id);
        if (result.success) {
         toast({
           title: 'Migration Successful',
           description: result.message,
         });
-        setExportedStatus(prev => ({...prev, [communityId]: true}));
+        setExportedStatus(prev => ({...prev, [communityToExport.id]: true}));
       } else {
         throw new Error(result.message);
       }
@@ -71,6 +92,7 @@ export function CommunityList({
       });
     } finally {
         setExportingId(null);
+        setCommunityToExport(null);
     }
   };
 
@@ -122,7 +144,7 @@ export function CommunityList({
                                 size="icon"
                                 className="h-8 w-8 opacity-0 group-hover:opacity-100 flex-shrink-0"
                                 disabled={exportedStatus[community.id] || exportingId === community.id}
-                                onClick={(e) => { e.stopPropagation(); handleExport(community.id); }}
+                                onClick={(e) => { e.stopPropagation(); confirmExport(community); }}
                             >
                                 {exportingId === community.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <UploadCloud className="h-4 w-4" />}
                             </Button>
@@ -136,6 +158,23 @@ export function CommunityList({
             )}
             </div>
         </ScrollArea>
+        <AlertDialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Export Community to Firestore?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will migrate the community &quot;{communityToExport?.name}&quot; and all its data from MongoDB to Firestore.
+                        This includes approximately {communityToExport?.memberCount} members and their associated messages. This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setCommunityToExport(null)}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleExport}>
+                        {exportingId ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Exporting...</> : "Confirm Export"}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
