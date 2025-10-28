@@ -192,8 +192,13 @@ export async function isCommunityExported(communityId: string): Promise<boolean>
   }
 }
 
-export async function getCommunityExportData(communityId: string) {
-  console.log(`[EXPORT_PREVIEW] Starting data fetch for communityId: ${communityId}`);
+export interface CommunityExportDataResult {
+    success: boolean;
+    message: string;
+    exportData: string;
+}
+
+export async function getCommunityExportData(communityId: string, onStep: (step: 'community' | 'members' | 'messages') => void): Promise<CommunityExportDataResult> {
   let exportPreviewData: any = { community: {}, memberships: [], messages: [] };
   const PREVIEW_LIMIT = 100;
 
@@ -201,39 +206,34 @@ export async function getCommunityExportData(communityId: string) {
     const db = await getDb();
 
     // Fetch community
+    onStep('community');
     const rawMongoCommunity = await db.collection('communities').findOne({ _id: new ObjectId(communityId) });
     if (!rawMongoCommunity) {
       throw new Error('Community not found in MongoDB');
     }
-    const {
-        _id,
-        usersList,
-        communityHandles,
-        owner,
-        createdBy,
-        updatedBy,
-        ...restOfCommunityData
-    } = rawMongoCommunity;
-
-    const finalCommunityData = {
-        ...restOfCommunityData,
-        migratedAt: new Date(), // Using current date as a placeholder
-    };
+    const finalCommunityData = JSON.parse(JSON.stringify({
+        ...rawMongoCommunity,
+        migratedAt: new Date(), 
+    }));
+    delete finalCommunityData._id;
+    delete finalCommunityData.usersList;
+    delete finalCommunityData.communityHandles;
     exportPreviewData.community = finalCommunityData;
 
     // Fetch members (with limit)
-    const memberMongoOids = (usersList && Array.isArray(usersList))
-      ? usersList.map((u: any) => u.userId).filter(Boolean)
+    onStep('members');
+    const memberMongoOids = (rawMongoCommunity.usersList && Array.isArray(rawMongoCommunity.usersList))
+      ? rawMongoCommunity.usersList.map((u: any) => u.userId).filter(Boolean)
       : [];
     const usersToMigrate = memberMongoOids.length > 0
       ? await db.collection('users').find({ _id: { $in: memberMongoOids } }).limit(PREVIEW_LIMIT).toArray()
       : [];
 
-    const ownerMongoId = owner?.toString();
-    const adminMongoIds = new Set((communityHandles || [])
+    const ownerMongoId = rawMongoCommunity.owner?.toString();
+    const adminMongoIds = new Set((rawMongoCommunity.communityHandles || [])
       .filter((h: any) => h.role === 'cl' || h.role === 'admin')
       .map((h: any) => h.userId.toString()));
-    const userJoinDateMap = new Map((usersList || []).map((u: any) => [u.userId.toString(), u.joinedAt]));
+    const userJoinDateMap = new Map((rawMongoCommunity.usersList || []).map((u: any) => [u.userId.toString(), u.joinedAt]));
 
     exportPreviewData.memberships = usersToMigrate.map(user => {
         const memberMongoId = user._id.toString();
@@ -245,19 +245,19 @@ export async function getCommunityExportData(communityId: string) {
         }
         const joinedAt = userJoinDateMap.get(memberMongoId);
 
-        // Destructure user to get all fields
-        const { _id, __v, firebaseUid, ...restOfUser } = user;
+        const { _id, __v, firebaseUid, ...restOfUser } = JSON.parse(JSON.stringify(user));
 
         return {
           communityId: communityId,
           userId: `firebase-uid-placeholder-${user.email}`,
           role: role,
           joinedAt: joinedAt ? new Date(joinedAt) : new Date(),
-          ...restOfUser, // Add all other user fields
+          ...restOfUser,
         };
     });
 
     // Fetch messages (with limit, using efficient channel ID retrieval)
+    onStep('messages');
     const mongoChannelIds = await db.collection('channels')
         .find({ community: new ObjectId(communityId) })
         .project({ _id: 1 })
@@ -278,7 +278,7 @@ export async function getCommunityExportData(communityId: string) {
             createdAt: message.createdAt,
             userId: `firebase-uid-placeholder-${senderEmail}`,
         };
-    }).reverse(); // Reverse to show oldest first in the preview
+    }).reverse();
 
     return {
         success: true,
@@ -287,7 +287,6 @@ export async function getCommunityExportData(communityId: string) {
     };
 
   } catch (error: any) {
-    console.error('[EXPORT_PREVIEW_FAILED] An error occurred during data fetch:', error);
     return {
         success: false,
         message: error.message || 'An unknown error occurred during data fetch.',
@@ -297,7 +296,6 @@ export async function getCommunityExportData(communityId: string) {
 }
 
 export async function migrateCommunityToFirestore(communityId: string) {
-  console.log(`[MIGRATION_START] Starting migration for communityId: ${communityId}`);
   const adminAuth = await getAdminAuth();
   const adminDb = await getAdminDb();
   let exportedData: any = {};
@@ -309,22 +307,18 @@ export async function migrateCommunityToFirestore(communityId: string) {
     // ** Step 1: Fetch the raw community document from MongoDB.
     const rawMongoCommunity = await db.collection('communities').findOne({ _id: new ObjectId(communityId) });
     if (!rawMongoCommunity) {
-      console.error(`[MIGRATION_ERROR] Community with ID ${communityId} not found in MongoDB.`);
       throw new Error('Community not found in MongoDB');
     }
-    console.log(`[MIGRATION_LOG] Found community "${rawMongoCommunity.name}" in MongoDB.`);
 
     // ** Step 2: Get member ObjectIDs from the raw document.
     const memberMongoOids = (rawMongoCommunity.usersList && Array.isArray(rawMongoCommunity.usersList))
       ? rawMongoCommunity.usersList.map((u: any) => u.userId).filter(Boolean)
       : [];
-    console.log(`[MIGRATION_LOG] Found 'usersList' with ${memberMongoOids.length} potential member ObjectIDs.`);
     
     // ** Step 3: Fetch users from MongoDB using the array of ObjectIDs.
     const usersToMigrate = memberMongoOids.length > 0 
       ? await db.collection('users').find({ _id: { $in: memberMongoOids } }).toArray()
       : [];
-    console.log(`[MIGRATION_LOG] Matched ${usersToMigrate.length} user documents to migrate from the community's member list.`);
     
     // ** Step 4: Register/Update users in Firebase Auth and prepare user profile data for Firestore.
     const userMigrationPromises = usersToMigrate.map(async (user) => {
@@ -341,8 +335,8 @@ export async function migrateCommunityToFirestore(communityId: string) {
           firebaseUser = await adminAuth.getUserByEmail(user.email);
           // Update existing user's info
           await adminAuth.updateUser(firebaseUser.uid, {
-              displayName: user.fullName || user.displayName || '',
-              photoURL: user.profileImage || user.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(user.fullName || user.displayName || 'U')}`,
+              displayName: user.fullName || user.displayName || user.email,
+              photoURL: user.profileImage || user.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(user.fullName || user.displayName || user.email)}`,
            });
         } catch (e: any) {
           if (e.code === 'auth/user-not-found') {
@@ -350,28 +344,25 @@ export async function migrateCommunityToFirestore(communityId: string) {
             firebaseUser = await adminAuth.createUser({
               email: user.email,
               emailVerified: true,
-              displayName: user.fullName || user.displayName || '',
-              photoURL: user.profileImage || user.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(user.fullName || user.displayName || 'U')}`,
+              displayName: user.fullName || user.displayName || user.email,
+              photoURL: user.profileImage || user.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(user.fullName || user.displayName || user.email)}`,
             });
           } else {
              throw e; // Re-throw other auth errors
           }
         }
         
-        // Sanitize the entire user object for Firestore by removing ObjectId types
         const sanitizedUser = JSON.parse(JSON.stringify(user));
-        const { _id, __v, ...restOfUser } = sanitizedUser;
+        const { _id, __v, firebaseUid, ...restOfUser } = sanitizedUser;
 
         const firestoreUserProfile = {
           ...restOfUser,
           migratedAt: FieldValue.serverTimestamp(),
         };
 
-        // Add user profile update to the batch
         const userRef = adminDb.collection('users').doc(firebaseUser.uid);
         batch.set(userRef, firestoreUserProfile, { merge: true });
 
-        // Return the mapping for both new and existing users
         return { mongoId: user._id.toString(), firebaseUid: firebaseUser.uid, isNewUser };
 
       } catch (e) {
@@ -382,20 +373,15 @@ export async function migrateCommunityToFirestore(communityId: string) {
 
     const migratedUsersResults = (await Promise.all(userMigrationPromises)).filter((res): res is { mongoId: string; firebaseUid: string; isNewUser: boolean; } => res !== null);
     const uidMap = new Map(migratedUsersResults.map(u => [u.mongoId, u]));
-    console.log(`[MIGRATION_LOG] Successfully prepared ${uidMap.size} users for migration (Auth & Firestore profiles).`);
 
     // ** Step 5: Migrate Community
     const firestoreCommunityRef = adminDb.collection('communities').doc(communityId);
     
-    // Sanitize the community data before setting it
     const sanitizedCommunity = JSON.parse(JSON.stringify(rawMongoCommunity));
     const { 
         _id, 
         usersList, 
         communityHandles, 
-        owner, 
-        createdBy,
-        updatedBy,
         ...restOfCommunityData 
     } = sanitizedCommunity;
 
@@ -405,11 +391,7 @@ export async function migrateCommunityToFirestore(communityId: string) {
     };
     
     batch.set(firestoreCommunityRef, finalCommunityData);
-    console.log(`[MIGRATION_LOG] Community document "${rawMongoCommunity.name}" added to batch.`);
-    
-    // Prepare exportedData after sanitizing
-    exportedData = { community: JSON.parse(JSON.stringify(finalCommunityData)), memberships: [], messages: [] };
-
+    exportedData = { community: finalCommunityData, memberships: [], messages: [] };
 
     // ** Step 6: Migrate Memberships
     const ownerMongoId = rawMongoCommunity.owner?.toString();
@@ -444,6 +426,7 @@ export async function migrateCommunityToFirestore(communityId: string) {
                   membershipData.passwordInitialized = false;
                 }
                 
+                // Use a sanitized version for the exported JSON
                 exportedData.memberships.push(JSON.parse(JSON.stringify(membershipData)));
                 const membershipRef = adminDb.collection('memberships').doc();
                 batch.set(membershipRef, membershipData);
@@ -452,7 +435,6 @@ export async function migrateCommunityToFirestore(communityId: string) {
             }
         }
     }
-    console.log(`[MIGRATION_LOG] Prepared ${exportedData.memberships.length} membership documents for batch write.`);
     
     // ** Step 7: Migrate Messages
     const mongoChannels = await db.collection('channels').find({ community: rawMongoCommunity._id }).toArray();
@@ -460,7 +442,6 @@ export async function migrateCommunityToFirestore(communityId: string) {
     const mongoMessages = mongoChannelIds.length > 0
         ? await db.collection('messages').find({ channel: { $in: mongoChannelIds } }).toArray()
         : [];
-    console.log(`[MIGRATION_LOG] Found ${mongoMessages.length} messages to migrate.`);
 
     for (const message of mongoMessages) {
         const senderMongoId = (message.user || message.senderId)?.toString();
@@ -484,7 +465,6 @@ export async function migrateCommunityToFirestore(communityId: string) {
              console.warn(`[MIGRATION_WARN] Skipping message ID ${message._id} because sender ${senderMongoId} was not found in the migrated user map.`);
         }
     }
-    console.log(`[MIGRATION_LOG] Prepared ${exportedData.messages.length} message documents for batch write.`);
     
     // ** Step 8: Commit all changes
     await batch.commit();

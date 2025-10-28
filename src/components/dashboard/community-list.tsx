@@ -5,7 +5,7 @@ import { Community } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { ClipboardCopy, UploadCloud, Trash2, ArrowRight } from 'lucide-react';
+import { ClipboardCopy, UploadCloud, Trash2, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect, useCallback } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -19,7 +19,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { isCommunityExported, migrateCommunityToFirestore, getCommunityExportData } from '@/app/actions';
+import { isCommunityExported, migrateCommunityToFirestore, getCommunityExportData, type CommunityExportDataResult } from '@/app/actions';
 import { deleteCommunityFromFirestore } from '@/app/fire/actions';
 import { useRouter } from 'next/navigation';
 import { Textarea } from '../ui/textarea';
@@ -33,12 +33,15 @@ interface CommunityListProps {
 
 type DialogStatus = 'idle' | 'confirming-export' | 'exporting' | 'export-success' | 'export-error' | 'confirming-delete' | 'deleting' | 'delete-success' | 'delete-error';
 
+type LoadingStep = 'community' | 'members' | 'messages';
+
 interface DialogState {
   status: DialogStatus;
   community: Community | null;
   message: string | null;
   exportedData: string | null;
   destination: 'Development' | 'Production';
+  loadingSteps: Record<LoadingStep, boolean>;
 }
 
 const INITIAL_DIALOG_STATE: DialogState = {
@@ -47,6 +50,11 @@ const INITIAL_DIALOG_STATE: DialogState = {
   message: null,
   exportedData: null,
   destination: process.env.NODE_ENV === 'production' ? 'Production' : 'Development',
+  loadingSteps: {
+    community: false,
+    members: false,
+    messages: false,
+  }
 };
 
 export function CommunityList({
@@ -64,29 +72,26 @@ export function CommunityList({
   
   const checkAllExportStatus = useCallback(async () => {
     if (!showExport) return;
-    const statusMap: Record<string, boolean> = {};
-    const checkingMap: Record<string, boolean> = {};
-    for (const community of communities) {
-      checkingMap[community.id] = true;
-      setCheckingExportStatus({...checkingMap});
-    }
+    const initialStatus: Record<string, boolean> = {};
+    communities.forEach(c => initialStatus[c.id] = false);
+    setCheckingExportStatus(initialStatus);
 
     await Promise.all(communities.map(async (community) => {
         try {
             const isExported = await isCommunityExported(community.id);
-            statusMap[community.id] = isExported;
+            setExportedStatusMap(prev => ({...prev, [community.id]: isExported}));
         } catch {
-            statusMap[community.id] = false;
+            setExportedStatusMap(prev => ({...prev, [community.id]: false}));
+        } finally {
+            setCheckingExportStatus(prev => ({...prev, [community.id]: false}));
         }
     }));
-    
-    setExportedStatusMap(statusMap);
-    setCheckingExportStatus({});
   }, [communities, showExport]);
+
 
   useEffect(() => {
     if(communities.length > 0 && showExport){
-      checkAllExportStatus();
+      // checkAllExportStatus();
     }
   }, [communities, checkAllExportStatus, showExport]);
 
@@ -97,6 +102,69 @@ export function CommunityList({
       description: successMessage,
     });
   };
+  
+  const processExportDataStream = async (communityId: string) => {
+    try {
+        const response = await fetch('/api/export-stream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ communityId }),
+        });
+
+        if (!response.body) {
+            throw new Error('No response body');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            
+            const parts = buffer.split('\n');
+            buffer = parts.pop() || ''; // The last part might be incomplete
+
+            for (const part of parts) {
+                if (part) {
+                    try {
+                        const chunk = JSON.parse(part);
+                        if (chunk.step) {
+                            setDialogState(prevState => ({
+                                ...prevState,
+                                loadingSteps: {
+                                    ...prevState.loadingSteps,
+                                    [chunk.step]: true
+                                }
+                            }));
+                        } else if (chunk.data) {
+                             const result: CommunityExportDataResult = {
+                                success: true,
+                                message: 'Preview loaded.',
+                                exportData: JSON.stringify(chunk.data, null, 2),
+                            }
+                            if (result.success) {
+                                setDialogState(prevState => ({ ...prevState, exportedData: result.exportData, message: null }));
+                            } else {
+                                setDialogState(prevState => ({ ...prevState, status: 'export-error', message: result.message, exportedData: result.exportData }));
+                            }
+                        } else if (chunk.error) {
+                             setDialogState(prevState => ({ ...prevState, status: 'export-error', message: chunk.error, exportedData: JSON.stringify(chunk.details || {}, null, 2) }));
+                        }
+                    } catch (e) {
+                        console.error("Error parsing stream chunk:", e, "Chunk:", part);
+                    }
+                }
+            }
+        }
+    } catch (error: any) {
+        setDialogState(prevState => ({ ...prevState, status: 'export-error', message: error.message || "An unexpected error occurred while fetching the preview.", exportedData: null }));
+    }
+}
+
 
   const confirmExport = async (community: Community) => {
     setDialogState({
@@ -104,15 +172,10 @@ export function CommunityList({
         status: 'confirming-export',
         community: community,
         destination: process.env.NODE_ENV === 'production' ? 'Production' : 'Development',
-        message: 'Loading data for preview...'
     });
-    const result = await getCommunityExportData(community.id);
-    if (result.success) {
-      setDialogState(prevState => ({ ...prevState, exportedData: result.exportData, message: null }));
-    } else {
-      setDialogState(prevState => ({ ...prevState, status: 'export-error', message: result.message, exportedData: result.exportData }));
-    }
+    processExportDataStream(community.id);
   }
+
 
   const confirmDelete = (community: Community) => {
     setDialogState({
@@ -154,7 +217,7 @@ export function CommunityList({
         throw new Error(result.message);
       }
     } catch (error: any) {
-      setDialogState(prevState => ({...prevState, status: 'delete-error', message: error.message || 'An unknown error occurred.' }));
+      setDialogState(prevState => ({ ...prevState, status: 'delete-error', message: error.message || 'An unknown error occurred.' }));
     }
   }
   
@@ -177,7 +240,13 @@ export function CommunityList({
   const isProcessing = dialogState.status === 'exporting' || dialogState.status === 'deleting';
 
   const renderDialogContent = () => {
-    const { status, community, destination, message, exportedData } = dialogState;
+    const { status, community, destination, message, exportedData, loadingSteps } = dialogState;
+
+    const loadingChecklist = [
+        { key: 'community', label: 'Fetching community data...' },
+        { key: 'members', label: 'Fetching members...' },
+        { key: 'messages', label: 'Fetching messages...' },
+    ];
 
     switch(status) {
         case 'confirming-export':
@@ -217,11 +286,21 @@ export function CommunityList({
                         </Button>
                     </div>
                 )}
-                {(status === 'confirming-export' && !exportedData) && (
+                {(status === 'confirming-export' && !exportedData && status !== 'export-error') && (
                     <div className="py-4 space-y-4">
-                        <div className="flex items-center justify-center h-24">
-                           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                           <p className='ml-4 text-muted-foreground'>{message}</p>
+                        <div className="flex flex-col items-start justify-center p-4 min-h-[10rem]">
+                            {loadingChecklist.map(step => (
+                                <div key={step.key} className="flex items-center space-x-3 mb-2">
+                                    {loadingSteps[step.key as LoadingStep] ? (
+                                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                    ) : (
+                                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                                    )}
+                                    <span className={cn("text-sm", loadingSteps[step.key as LoadingStep] ? 'text-muted-foreground' : 'text-foreground')}>
+                                        {step.label}
+                                    </span>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 )}
@@ -332,7 +411,7 @@ export function CommunityList({
                         <div className="flex-1 flex justify-between items-center">
                           <span className="truncate text-sm">{community.name}</span>
                           <div className="flex items-center space-x-2">
-                            <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                             <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                              <Button
                                 variant="ghost"
                                 size="icon"
