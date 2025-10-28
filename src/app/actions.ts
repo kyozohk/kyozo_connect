@@ -216,10 +216,16 @@ export async function migrateCommunityToFirestore(communityId: string) {
               emailVerified: true,
               displayName: user.fullName || user.displayName,
               photoURL: user.profileImage || user.photoURL,
-              password: Math.random().toString(36).slice(-8), 
+              phoneNumber: user.phoneNumber, // Include phone number
             });
           } else {
-            throw e;
+            // If user exists, update them with potentially new info
+             await adminAuth.updateUser(e.uid, {
+                displayName: user.fullName || user.displayName,
+                photoURL: user.profileImage || user.photoURL,
+                phoneNumber: user.phoneNumber,
+             });
+            firebaseUser = await adminAuth.getUser(e.uid);
           }
         }
         return { mongoId: user._id.toString(), firebaseUid: firebaseUser.uid };
@@ -237,11 +243,19 @@ export async function migrateCommunityToFirestore(communityId: string) {
     if (!mongoCommunity) throw new Error('Community not found in MongoDB');
 
     const firestoreCommunityRef = adminDb.collection('communities').doc(communityId);
+    
+    // Create a clean community data object, excluding fields we don't want to migrate
+    const {
+        _id,
+        usersList,
+        communityHandles,
+        owner,
+        ...restOfCommunityData
+    } = mongoCommunity;
+
     await firestoreCommunityRef.set({
-      name: mongoCommunity.name,
-      tagline: mongoCommunity.tagline,
-      communityProfileImage: mongoCommunity.communityProfileImage,
-      createdAt: mongoCommunity.createdAt,
+      ...restOfCommunityData, // copy all other fields like name, tagline, description, tags, etc.
+      migratedAt: FieldValue.serverTimestamp(),
     });
 
     // 4. Migrate Memberships
@@ -256,7 +270,7 @@ export async function migrateCommunityToFirestore(communityId: string) {
             communityId: communityId,
             userId: ownerFirebaseUid,
             role: 'owner',
-            joinedAt: FieldValue.serverTimestamp(),
+            joinedAt: FieldValue.serverTimestamp(), // This should ideally come from mongoCommunity.usersList
         });
     }
 

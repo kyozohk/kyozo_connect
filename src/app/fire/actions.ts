@@ -1,3 +1,4 @@
+
 'use server';
 
 import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
@@ -58,9 +59,10 @@ export async function getFirestoreMembers(communityId: string): Promise<Member[]
           displayName: userRecord.displayName || userRecord.email || 'Unknown User',
           photoURL: userRecord.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(userRecord.displayName || 'U')}`,
           email: userRecord.email || '',
+          phoneNumber: userRecord.phoneNumber,
           role: membership.role,
           joinedAt: joinedAt,
-          data: JSON.parse(JSON.stringify({ ...userRecord, role: membership.role, joinedAt: joinedAt })),
+          data: JSON.parse(JSON.stringify({ ...userRecord.toJSON(), role: membership.role, joinedAt: joinedAt })),
         };
       } catch (error: any) {
         if (error.code === 'auth/user-not-found') {
@@ -120,7 +122,7 @@ export async function getFirestoreMessagesForMember(communityId: string, memberI
                         displayName: userRecord.displayName || userRecord.email || 'Unknown',
                         photoURL: userRecord.photoURL || '',
                         email: userRecord.email || '',
-                        data: JSON.parse(JSON.stringify(userRecord)),
+                        data: JSON.parse(JSON.stringify(userRecord.toJSON())),
                     };
                     userCache.set(senderId, sender);
                 } catch (error) {
