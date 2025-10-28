@@ -18,6 +18,7 @@ export interface Member {
   phoneNumber?: string;
   joinedAt?: string;
   role: 'owner' | 'admin' | 'member';
+  passwordInitialized?: boolean;
   data: any;
 }
 

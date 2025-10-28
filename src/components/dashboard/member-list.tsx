@@ -142,6 +142,11 @@ export function MemberList({
                                     {member.role}
                                 </Badge>
                             )}
+                             {member.passwordInitialized === false && (
+                                <Badge variant="outline" className="text-xs h-5">
+                                    Invited
+                                </Badge>
+                            )}
                           </div>
                           <p className="text-xs text-muted-foreground truncate">{member.phoneNumber || member.email}</p>
                           {member.joinedAt && (

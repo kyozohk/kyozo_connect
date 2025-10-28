@@ -62,6 +62,7 @@ export async function getFirestoreMembers(communityId: string): Promise<Member[]
           phoneNumber: userRecord.phoneNumber || '',
           role: membership.role,
           joinedAt: joinedAt,
+          passwordInitialized: membership.passwordInitialized,
           data: JSON.parse(JSON.stringify({ ...userRecord.toJSON(), role: membership.role, joinedAt: joinedAt })),
         };
       } catch (error: any) {
@@ -78,8 +79,8 @@ export async function getFirestoreMembers(communityId: string): Promise<Member[]
     // Sort members: owner, then admins, then members, then by displayName
     members.sort((a, b) => {
         const roleOrder = { owner: 0, admin: 1, member: 2 };
-        if (roleOrder[a.role] !== roleOrder[b.role]) {
-            return roleOrder[a.role] - roleOrder[b.role];
+        if (a.role !== b.role) {
+            return (roleOrder[a.role] || 2) - (roleOrder[b.role] || 2);
         }
         return a.displayName.localeCompare(b.displayName);
     });

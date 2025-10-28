@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { getDb } from '@/lib/mongodb';
@@ -214,6 +215,7 @@ export async function migrateCommunityToFirestore(communityId: string) {
       if (!user.email) return null;
       try {
         let firebaseUser: UserRecord;
+        let isNewUser = false;
         try {
           firebaseUser = await adminAuth.getUserByEmail(user.email);
           await adminAuth.updateUser(firebaseUser.uid, {
@@ -224,6 +226,7 @@ export async function migrateCommunityToFirestore(communityId: string) {
            firebaseUser = await adminAuth.getUser(firebaseUser.uid); 
         } catch (e: any) {
           if (e.code === 'auth/user-not-found') {
+            isNewUser = true;
             firebaseUser = await adminAuth.createUser({
               email: user.email,
               emailVerified: true,
@@ -235,7 +238,7 @@ export async function migrateCommunityToFirestore(communityId: string) {
              throw e;
           }
         }
-        return { mongoId: user._id.toString(), firebaseUid: firebaseUser.uid };
+        return { mongoId: user._id.toString(), firebaseUid: firebaseUser.uid, isNewUser };
       } catch (e) {
         console.error(`Failed to migrate user ${user.email}:`, e);
         return null;
@@ -243,12 +246,20 @@ export async function migrateCommunityToFirestore(communityId: string) {
     });
 
     const migratedUsers = (await Promise.all(userMigrationPromises)).filter(u => u !== null);
-    const uidMap = new Map(migratedUsers.map(u => [u!.mongoId, u!.firebaseUid]));
+    const uidMap = new Map(migratedUsers.map(u => [u!.mongoId, u!]));
 
     // 4. Migrate Community
     const firestoreCommunityRef = adminDb.collection('communities').doc(communityId);
     
-    const { _id, usersList, communityHandles, owner, ...restOfCommunityData } = mongoCommunity;
+    // Explicitly remove fields that are ObjectIds or are being replaced by the new structure
+    const { 
+        _id, 
+        usersList, 
+        communityHandles, 
+        owner, 
+        createdBy,
+        ...restOfCommunityData 
+    } = mongoCommunity;
 
     await firestoreCommunityRef.set({
       ...restOfCommunityData,
@@ -265,8 +276,8 @@ export async function migrateCommunityToFirestore(communityId: string) {
       .map((h: any) => h.userId.toString()));
 
     for (const memberMongoId of memberMongoIds) {
-      const firebaseUid = uidMap.get(memberMongoId);
-      if (firebaseUid) {
+      const migratedUser = uidMap.get(memberMongoId);
+      if (migratedUser) {
         let role: 'owner' | 'admin' | 'member' = 'member';
         if (memberMongoId === ownerMongoId) {
           role = 'owner';
@@ -275,14 +286,20 @@ export async function migrateCommunityToFirestore(communityId: string) {
         }
 
         const joinedAt = userJoinDateMap.get(memberMongoId);
-
-        const membershipRef = adminDb.collection('memberships').doc();
-        batch.set(membershipRef, {
+        
+        const membershipData: any = {
           communityId: communityId,
-          userId: firebaseUid,
+          userId: migratedUser.firebaseUid,
           role: role,
           joinedAt: joinedAt ? new Date(joinedAt) : FieldValue.serverTimestamp(),
-        });
+        };
+
+        if (migratedUser.isNewUser) {
+          membershipData.passwordInitialized = false;
+        }
+
+        const membershipRef = adminDb.collection('memberships').doc();
+        batch.set(membershipRef, membershipData);
       }
     }
     
@@ -293,13 +310,13 @@ export async function migrateCommunityToFirestore(communityId: string) {
 
     for (const message of mongoMessages) {
         const senderMongoId = message.user?.toString();
-        const senderFirebaseUid = uidMap.get(senderMongoId);
-        if (senderFirebaseUid) {
+        const migratedUser = uidMap.get(senderMongoId);
+        if (migratedUser) {
             const messageRef = firestoreCommunityRef.collection('messages').doc();
             batch.set(messageRef, {
                 text: message.text,
                 createdAt: message.createdAt,
-                userId: senderFirebaseUid,
+                userId: migratedUser.firebaseUid,
             });
         }
     }
@@ -313,3 +330,4 @@ export async function migrateCommunityToFirestore(communityId: string) {
     return { success: false, message: error.message || 'An unknown error occurred during migration.' };
   }
 }
+
