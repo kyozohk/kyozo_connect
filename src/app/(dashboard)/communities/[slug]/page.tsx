@@ -1,4 +1,5 @@
 
+
 import { getFirestoreCommunities, getFirestoreMembers } from '@/app/fire/actions';
 import { CommunityHeader } from '@/components/communities/community-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +9,8 @@ import { notFound } from 'next/navigation';
 export default async function CommunityOverviewPage({ params }: { params: { slug: string } }) {
   const { slug } = params;
   const communities = await getFirestoreCommunities();
-  const community = communities.find(c => c.id === slug);
+  // Find community by slug from data, fallback to ID
+  const community = communities.find(c => (c.data?.slug || c.id) === slug);
 
   if (!community) {
     notFound();

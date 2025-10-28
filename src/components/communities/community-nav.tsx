@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -22,11 +23,13 @@ interface CommunityNavProps {
 
 export function CommunityNav({ communities, currentCommunityId }: CommunityNavProps) {
   const router = useRouter();
-  const currentCommunity = communities.find((c) => c.id === currentCommunityId);
+  
+  // Find community by slug or ID for current selection
+  const currentCommunity = communities.find(c => (c.data?.slug || c.id) === currentCommunityId);
 
-  const handleCommunityChange = (communityId: string) => {
-    if (communityId !== currentCommunityId) {
-      router.push(`/communities/${communityId}`);
+  const handleCommunityChange = (communitySlug: string) => {
+    if (communitySlug !== currentCommunityId) {
+      router.push(`/communities/${communitySlug}`);
     }
   };
 
@@ -55,17 +58,20 @@ export function CommunityNav({ communities, currentCommunityId }: CommunityNavPr
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
-            {communities.map((community) => (
-              <SelectItem key={community.id} value={community.id}>
-                 <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                        <AvatarImage src={community.communityProfileImage} alt={community.name} />
-                        <AvatarFallback><LayoutGrid className="h-4 w-4" /></AvatarFallback>
-                    </Avatar>
-                    <span className="font-semibold">{community.name}</span>
-                </div>
-              </SelectItem>
-            ))}
+            {communities.map((community) => {
+              const slug = community.data?.slug || community.id;
+              return (
+                <SelectItem key={community.id} value={slug}>
+                   <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8">
+                          <AvatarImage src={community.communityProfileImage} alt={community.name} />
+                          <AvatarFallback><LayoutGrid className="h-4 w-4" /></AvatarFallback>
+                      </Avatar>
+                      <span className="font-semibold">{community.name}</span>
+                  </div>
+                </SelectItem>
+              )
+            })}
           </SelectGroup>
         </SelectContent>
       </Select>

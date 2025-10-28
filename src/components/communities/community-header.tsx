@@ -1,11 +1,18 @@
 
+
 import { Community } from "@/types";
 import Image from "next/image";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { LayoutGrid, Users, MapPin, Globe, Edit, UserPlus, Send, Tag } from "lucide-react";
+import { LayoutGrid, Users, MapPin, Globe, Edit, UserPlus, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface CommunityHeaderProps {
     community: Community;
@@ -13,6 +20,9 @@ interface CommunityHeaderProps {
 
 export function CommunityHeader({ community }: CommunityHeaderProps) {
     const data = community.data as any;
+    const tags = data.tags && Array.isArray(data.tags) ? data.tags : [];
+    const visibleTags = tags.slice(0, 5);
+    const hiddenTags = tags.slice(5);
 
     return (
         <div className="relative">
@@ -62,9 +72,23 @@ export function CommunityHeader({ community }: CommunityHeaderProps) {
                 </div>
 
                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    {data.tags && Array.isArray(data.tags) && data.tags.map((tag: string, index: number) => (
+                    {visibleTags.map((tag: string, index: number) => (
                         <Badge key={index} variant="secondary">{tag}</Badge>
                     ))}
+                    {hiddenTags.length > 0 && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="link" size="sm" className="p-0 h-auto text-muted-foreground">
+                                    +{hiddenTags.length} more
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                {hiddenTags.map((tag: string, index: number) => (
+                                    <DropdownMenuItem key={index}>{tag}</DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
                  </div>
 
                  <div className="mt-4 flex flex-wrap items-center gap-2">

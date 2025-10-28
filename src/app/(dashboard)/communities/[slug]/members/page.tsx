@@ -1,10 +1,20 @@
 
+
 import { MemberListClient } from '@/components/members/member-list-client';
-import { getFirestoreMembers } from '@/app/fire/actions';
+import { getFirestoreMembers, getFirestoreCommunities } from '@/app/fire/actions';
+import { notFound } from 'next/navigation';
 
 export default async function MembersPage({ params }: { params: { slug: string } }) {
   const { slug } = params;
-  const members = await getFirestoreMembers(slug);
+  
+  const communities = await getFirestoreCommunities();
+  const community = communities.find(c => (c.data?.slug || c.id) === slug);
+  
+  if (!community) {
+    notFound();
+  }
+
+  const members = await getFirestoreMembers(community.id);
   
   return (
     <div className="p-8">

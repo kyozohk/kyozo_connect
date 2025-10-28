@@ -1,13 +1,24 @@
 
+
 import { MemberListClient } from '@/components/members/member-list-client';
-import { getFirestoreMembers } from '@/app/fire/actions';
+import { getFirestoreMembers, getFirestoreCommunities } from '@/app/fire/actions';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Send } from 'lucide-react';
+import { notFound } from 'next/navigation';
 
 
 export default async function BroadcastPage({ params }: { params: { slug: string } }) {
-  const members = await getFirestoreMembers(params.slug);
+  const { slug } = params;
+  
+  const communities = await getFirestoreCommunities();
+  const community = communities.find(c => (c.data?.slug || c.id) === slug);
+  
+  if (!community) {
+    notFound();
+  }
+
+  const members = await getFirestoreMembers(community.id);
   
   return (
      <div className="p-8">
