@@ -3,7 +3,7 @@
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Loader2, BarChart3, DatabaseZap, Users, CreditCard, Settings, LogOut, PanelLeft } from 'lucide-react';
+import { Loader2, BarChart3, DatabaseZap, Users, CreditCard, Settings, LogOut, PanelLeft, LayoutGrid } from 'lucide-react';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter, SidebarTrigger } from '@/components/ui/sidebar';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { signOut } from 'firebase/auth';
@@ -39,6 +39,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const navItems = [
     { href: '/analytics', icon: BarChart3, label: 'Analytics' },
+    { href: '/communities', icon: LayoutGrid, label: 'Communities' },
     { href: '/migrate', icon: DatabaseZap, label: 'Migrate' },
     { href: '/firebase', icon: Users, label: 'Firebase Data' },
     { href: '/subscription', icon: CreditCard, label: 'Subscription' },

@@ -5,6 +5,7 @@ import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import { Community, Member, Message } from '@/types';
 import { UserRecord } from 'firebase-admin/auth';
 import { format, parseISO } from 'date-fns';
+import { DocumentData, Query, Timestamp } from 'firebase-admin/firestore';
 
 export async function getFirestoreCommunities(): Promise<Community[]> {
   const adminDb = await getAdminDb();
@@ -32,6 +33,78 @@ export async function getFirestoreCommunities(): Promise<Community[]> {
   } catch (error) {
     console.error('Failed to get communities from Firestore:', error);
     return [];
+  }
+}
+
+type PaginatedCommunity = Community & {
+  createdAt?: string;
+  messageCount?: number;
+};
+
+export async function getPaginatedFirestoreCommunities(
+    pageSize: number,
+    startAfter: any | null = null,
+    searchTerm: string = ''
+): Promise<{ communities: PaginatedCommunity[], hasMore: boolean }> {
+  const adminDb = await getAdminDb();
+  try {
+    let query: Query<DocumentData> = adminDb.collection('communities');
+
+    if (searchTerm) {
+      query = query
+        .where('name', '>=', searchTerm)
+        .where('name', '<=', searchTerm + '\uf8ff');
+    }
+    
+    query = query.orderBy('name').limit(pageSize + 1);
+
+    if (startAfter) {
+      const startAfterDoc = await adminDb.collection('communities').doc(startAfter).get();
+      if(startAfterDoc.exists) {
+        query = query.startAfter(startAfterDoc);
+      }
+    }
+    
+    const snapshot = await query.get();
+
+    const communities: PaginatedCommunity[] = await Promise.all(snapshot.docs.map(async (doc) => {
+      const data = doc.data();
+
+      // Fetch member count
+      const membersSnapshot = await adminDb.collection('memberships').where('communityId', '==', doc.id).get();
+      
+      // Fetch message count
+      const messagesSnapshot = await doc.ref.collection('messages').get();
+
+      let createdAt: string | undefined = undefined;
+      if (data.createdAt && data.createdAt instanceof Timestamp) {
+        createdAt = data.createdAt.toDate().toISOString();
+      } else if (typeof data.createdAt === 'string') {
+        createdAt = data.createdAt;
+      }
+
+      return {
+        id: doc.id,
+        name: data.name || 'Unnamed Community',
+        communityProfileImage: data.communityProfileImage || '',
+        memberCount: membersSnapshot.size,
+        messageCount: messagesSnapshot.size,
+        createdAt,
+        data: JSON.parse(JSON.stringify(data)),
+      };
+    }));
+
+    let hasMore = false;
+    if (communities.length > pageSize) {
+      hasMore = true;
+      communities.pop(); // Remove the extra item
+    }
+
+    return { communities, hasMore };
+
+  } catch (error) {
+    console.error('Failed to get paginated communities from Firestore:', error);
+    return { communities: [], hasMore: false };
   }
 }
 
