@@ -146,7 +146,7 @@ export function MemberList({
                             <p className="text-sm font-medium leading-none truncate">{member.displayName}</p>
                             {RoleIcon && <RoleIcon className={cn("h-4 w-4", member.role === 'owner' ? 'text-amber-500' : 'text-muted-foreground')} />}
                           </div>
-                          <p className="text-xs text-muted-foreground truncate">{member.phoneNumber || member.email}</p>
+                          <p className="text-xs text-muted-foreground truncate">{member.phoneNumber}</p>
                         </div>
                     </div>
                     <Button
