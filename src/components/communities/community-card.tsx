@@ -23,6 +23,7 @@ interface CommunityCardProps {
 export function CommunityCard({ community, viewMode }: CommunityCardProps) {
 
   const createdAt = community.createdAt ? new Date(community.createdAt) : null;
+  const data = community.data as any;
 
   const CardLink = ({children}: {children: React.ReactNode}) => (
     <Link href={`/dashboard/communities/${community.id}`} className="block h-full">
@@ -64,17 +65,27 @@ export function CommunityCard({ community, viewMode }: CommunityCardProps) {
             <CardTitle>{community.name}</CardTitle>
             </div>
         </CardHeader>
-        <CardContent className="flex-grow">
+        <CardContent className="flex-grow space-y-4">
             <div className="flex space-x-4 text-sm text-muted-foreground">
-            <div className="flex items-center">
-                <Users className="mr-1 h-4 w-4" />
-                {community.memberCount} members
+                <div className="flex items-center">
+                    <Users className="mr-1 h-4 w-4" />
+                    {community.memberCount} members
+                </div>
+                <div className="flex items-center">
+                    <MessagesSquare className="mr-1 h-4 w-4" />
+                    {community.messageCount || 0} messages
+                </div>
             </div>
-            <div className="flex items-center">
-                <MessagesSquare className="mr-1 h-4 w-4" />
-                {community.messageCount || 0} messages
-            </div>
-            </div>
+            {data.colorPalette && Array.isArray(data.colorPalette) && data.colorPalette.length > 0 && (
+                <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Color Palette</p>
+                    <div className="flex items-center gap-2">
+                        {data.colorPalette.map((color: any, index: number) => (
+                            <div key={index} className="h-5 w-5 rounded-full border" style={{ backgroundColor: color.hexCode }} title={color.hexCode} />
+                        ))}
+                    </div>
+                </div>
+            )}
         </CardContent>
         <CardFooter className="text-xs text-muted-foreground">
             <div className="flex items-center">

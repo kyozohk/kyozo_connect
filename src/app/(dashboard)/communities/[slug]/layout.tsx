@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -31,6 +30,7 @@ export default function CommunitySlugLayout({ children }: { children: React.Reac
   const [userRole, setUserRole] = useState<'owner' | 'admin' | 'member' | null>(null);
 
   useEffect(() => {
+    // Keep sidebar collapsed on community pages
     setOpen(false);
   }, [setOpen]);
 
@@ -62,29 +62,29 @@ export default function CommunitySlugLayout({ children }: { children: React.Reac
   ];
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar side="left" collapsible="none" className="w-64 border-r">
-        <SidebarHeader className="p-0">
-          <CommunityNav communities={communities} currentCommunityId={slug} />
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarMenu>
-            {navItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <Link href={item.href}>
-                  <SidebarMenuButton as="a" isActive={pathname === item.href}>
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarContent>
-      </Sidebar>
-      <main className="flex-1 overflow-y-auto">
-        {children}
-      </main>
-    </div>
+      <div className="flex h-full">
+        <Sidebar side="left" collapsible="none" className="w-64 border-r md:flex hidden">
+            <SidebarHeader className="p-0">
+            <CommunityNav communities={communities} currentCommunityId={slug} />
+            </SidebarHeader>
+            <SidebarContent>
+            <SidebarMenu>
+                {navItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                    <Link href={item.href}>
+                    <SidebarMenuButton as="a" isActive={pathname === item.href}>
+                        <item.icon />
+                        <span>{item.label}</span>
+                    </SidebarMenuButton>
+                    </Link>
+                </SidebarMenuItem>
+                ))}
+            </SidebarMenu>
+            </SidebarContent>
+        </Sidebar>
+        <main className="flex-1 overflow-y-auto">
+            {children}
+        </main>
+      </div>
   );
 }

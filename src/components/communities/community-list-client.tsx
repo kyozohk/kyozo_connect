@@ -99,7 +99,7 @@ export function CommunityListClient({ initialCommunities, initialHasMore, pageSi
       </div>
 
       {communities.length > 0 && (
-         <div className={`grid gap-4 ${viewMode === 'grid' ? 'md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
+         <div className={`grid gap-4 ${viewMode === 'grid' ? 'md:grid-cols-2' : 'grid-cols-1'}`}>
             {communities.map((community) => (
                 <CommunityCard key={community.id} community={community} viewMode={viewMode} />
             ))}

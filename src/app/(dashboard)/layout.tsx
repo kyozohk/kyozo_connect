@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2, BarChart3, DatabaseZap, Users, CreditCard, Settings, LogOut, LayoutGrid, Home } from 'lucide-react';
-import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
+import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter, SidebarTrigger, SidebarInset, useSidebar } from '@/components/ui/sidebar';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -15,12 +15,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const { setOpen } = useSidebar();
 
   useEffect(() => {
     if (!loading && !user) {
       router.replace('/login');
     }
   }, [user, loading, router]);
+  
+  useEffect(() => {
+      if (pathname.startsWith('/dashboard/communities/')) {
+        setOpen(false);
+      } else {
+        setOpen(true);
+      }
+  }, [pathname, setOpen]);
+
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -35,12 +45,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
   
-  // Do not render the main dashboard layout for community-specific pages
-  if (pathname.startsWith('/dashboard/communities/')) {
-    return <div className="flex min-h-screen">{children}</div>;
-  }
-
-
   const fallback = user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email!.charAt(0).toUpperCase();
 
   const navItems = [
@@ -69,7 +73,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {navItems.map((item) => (
                <SidebarMenuItem key={item.href}>
                  <Link href={item.href}>
-                    <SidebarMenuButton as="a" isActive={pathname === item.href} tooltip={item.label}>
+                    <SidebarMenuButton as="a" isActive={pathname.startsWith(item.href)} tooltip={item.label}>
                       <item.icon />
                       <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                     </SidebarMenuButton>
