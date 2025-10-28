@@ -6,8 +6,9 @@ import { Users, LayoutGrid, TrendingUp, MessagesSquare } from 'lucide-react';
 import { notFound } from 'next/navigation';
 
 export default async function CommunityOverviewPage({ params }: { params: { slug: string } }) {
+  const { slug } = params;
   const communities = await getFirestoreCommunities();
-  const community = communities.find(c => c.id === params.slug);
+  const community = communities.find(c => c.id === slug);
 
   if (!community) {
     notFound();

@@ -3,7 +3,8 @@ import { MemberListClient } from '@/components/members/member-list-client';
 import { getFirestoreMembers } from '@/app/fire/actions';
 
 export default async function MembersPage({ params }: { params: { slug: string } }) {
-  const members = await getFirestoreMembers(params.slug);
+  const { slug } = params;
+  const members = await getFirestoreMembers(slug);
   
   return (
     <div className="p-8">
