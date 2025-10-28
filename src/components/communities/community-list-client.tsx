@@ -80,8 +80,8 @@ export function CommunityListClient({ initialCommunities, initialHasMore, pageSi
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <div className="w-full max-w-sm">
+      <div className="flex items-center justify-between mb-4 gap-4">
+        <div className="flex-grow">
           <Input
             placeholder="Search communities..."
             value={searchTerm}

@@ -3,13 +3,14 @@
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Loader2, BarChart3, DatabaseZap, Users, CreditCard, Settings, LogOut, PanelLeft, LayoutGrid } from 'lucide-react';
-import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter, SidebarTrigger } from '@/components/ui/sidebar';
+import { Loader2, BarChart3, DatabaseZap, Users, CreditCard, Settings, LogOut, LayoutGrid } from 'lucide-react';
+import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -61,20 +62,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <SidebarContent>
           <SidebarMenu>
             {navItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <Link href={item.href} passHref>
-                  <SidebarMenuButton as="a" isActive={pathname === item.href} tooltip={item.label}>
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
+               <SidebarMenuItem key={item.href}>
+                 <Link href={item.href} passHref legacyBehavior>
+                    <SidebarMenuButton as="a" isActive={pathname === item.href} tooltip={item.label}>
+                      <item.icon />
+                      <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                    </SidebarMenuButton>
+                  </Link>
+               </SidebarMenuItem>
             ))}
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
-            <div className="flex flex-col gap-2 group-data-[collapsible=icon]:items-center">
-                 <div className="flex items-center gap-2 p-2">
+             <div className="flex flex-col gap-2 p-2 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:items-center">
+                <div className="flex items-center gap-2 p-2 group-data-[collapsible=icon]:p-0">
                     <Avatar className="h-8 w-8">
                         <AvatarImage src={user.photoURL ?? ''} alt={user.displayName ?? 'User'} />
                         <AvatarFallback>{fallback}</AvatarFallback>
@@ -84,12 +85,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <span className="text-xs text-muted-foreground">{user.email}</span>
                     </div>
                 </div>
-                 <SidebarMenu>
+                 <SidebarMenu className="group-data-[collapsible=icon]:p-0">
                     <SidebarMenuItem>
-                        <SidebarMenuButton onClick={handleLogout} tooltip="Log Out">
-                            <LogOut />
-                            <span className="group-data-[collapsible=icon]:hidden">Log Out</span>
-                        </SidebarMenuButton>
+                      <SidebarMenuButton onClick={handleLogout} tooltip="Log Out">
+                          <LogOut />
+                          <span className="group-data-[collapsible=icon]:hidden">Log Out</span>
+                      </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
             </div>
