@@ -1,15 +1,15 @@
-
 'use client';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Loader2, BarChart3, DatabaseZap, Users, CreditCard, Settings, LogOut, LayoutGrid, Home } from 'lucide-react';
+import { Loader2, BarChart3, DatabaseZap, Users, CreditCard, Settings, LogOut, LayoutGrid } from 'lucide-react';
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter, SidebarTrigger, SidebarInset, useSidebar } from '@/components/ui/sidebar';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -26,7 +26,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
       if (pathname.startsWith('/communities/')) {
         setOpen(false);
-      } else {
+      } else if (pathname.startsWith('/communities')) {
         setOpen(true);
       }
   }, [pathname, setOpen]);
@@ -61,18 +61,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex min-h-screen">
        <Sidebar>
         <SidebarHeader>
-            <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold tracking-tight text-primary group-data-[collapsible=icon]:hidden">
-                    Kyozo
-                </h1>
-                <SidebarTrigger className="ml-auto" />
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 overflow-hidden">
+                    {/* Expanded Logo */}
+                    <Image src="https://i.imgur.com/83y2F7S.png" alt="Kyozo Logo" width={100} height={28} className="group-data-[collapsible=icon]:hidden" />
+                    {/* Collapsed Icon */}
+                    <Image src="https://i.imgur.com/w9oNM2y.png" alt="Kyozo Icon" width={28} height={28} className="hidden group-data-[collapsible=icon]:block" />
+                </div>
+                <SidebarTrigger />
             </div>
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
             {navItems.map((item) => (
                <SidebarMenuItem key={item.href}>
-                 <Link href={item.href}>
+                 <Link href={item.href} passHref>
                     <SidebarMenuButton as="a" isActive={pathname.startsWith(item.href)} tooltip={item.label}>
                       <item.icon />
                       <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
