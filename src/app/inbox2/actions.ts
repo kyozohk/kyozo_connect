@@ -107,13 +107,47 @@ export async function getCommunitiesWithMembers(): Promise<CommunityWithMembers[
           memberCount: { $size: '$members' },
           data: {
              // Re-add fields from the original community that were lost in $group
-            ...Object.fromEntries(
+             ...Object.fromEntries(
                 Object.keys(db.collection('communities').findOne({}) || {}).map(k => [k, `$rawCommunity.${k}`])
             ),
-             // Remove fields we don't need in the final `data` blob
-            usersList: 0, 
+             usersList: 0, // This was the cause of the error
           },
           members: '$members',
+        }
+      },
+      // Corrected Stage 7
+      {
+        $addFields: {
+           "data": "$rawCommunity"
+        }
+      },
+      {
+        $project: {
+            _id: 0,
+            id: { $toString: '$_id' },
+            name: '$name',
+            communityProfileImage: '$communityProfileImage',
+            memberCount: { $size: '$members' },
+            members: '$members',
+            data: {
+                $let: {
+                    vars: {
+                        communityData: "$data"
+                    },
+                    in: {
+                        $function: {
+                            body: `function(data) {
+                                delete data.usersList;
+                                delete data.memberInfo;
+                                delete data.memberRole;
+                                return data;
+                            }`,
+                            args: ["$$communityData"],
+                            lang: "js"
+                        }
+                    }
+                }
+            }
         }
       },
       { $sort: { name: 1 } }
