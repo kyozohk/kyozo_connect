@@ -331,39 +331,39 @@ export function CommunityList({
                         </Avatar>
                         <div className="flex-1 flex justify-between items-center">
                           <span className="truncate text-sm">{community.name}</span>
-                          <div className="flex items-center">
-                            <Badge variant="outline">{community.memberCount}</Badge>
+                          <div className="flex items-center space-x-2">
                             <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                              <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 w-8 flex-shrink-0"
+                                className="h-10 w-10 flex-shrink-0"
                                 onClick={(e) => { e.stopPropagation(); handleCopy(JSON.stringify(community.data, null, 2), `Community data for "${community.name}" has been copied.`); }}
                             >
-                                <ClipboardCopy className="h-4 w-4" />
+                                <ClipboardCopy className="h-5 w-5" />
                             </Button>
                             {showExport ? (
                              <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-9 w-9 flex-shrink-0"
+                                className="h-10 w-10 flex-shrink-0"
                                 disabled={exportedStatusMap[community.id] || isProcessing || checkingExportStatus[community.id]}
                                 onClick={(e) => { e.stopPropagation(); confirmExport(community); }}
                             >
-                                {checkingExportStatus[community.id] ? <Loader2 className="h-4 w-4 animate-spin"/> : <UploadCloud className="h-5 w-5 text-primary" />}
+                                {checkingExportStatus[community.id] ? <Loader2 className="h-5 w-5 animate-spin"/> : <UploadCloud className="h-6 w-6 text-primary" />}
                             </Button>
                             ) : (
                              <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-9 w-9 flex-shrink-0"
+                                className="h-10 w-10 flex-shrink-0"
                                 disabled={isProcessing}
                                 onClick={(e) => { e.stopPropagation(); confirmDelete(community); }}
                             >
-                                <Trash2 className="h-5 w-5 text-destructive" />
+                                <Trash2 className="h-6 w-6 text-destructive" />
                             </Button>
                             )}
                           </div>
+                          <Badge variant="outline">{community.memberCount}</Badge>
                           </div>
                         </div>
                     </div>
