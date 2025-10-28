@@ -105,56 +105,25 @@ export async function getCommunitiesWithMembers(): Promise<CommunityWithMembers[
           name: '$name',
           communityProfileImage: '$communityProfileImage',
           memberCount: { $size: '$members' },
-          data: {
-             // Re-add fields from the original community that were lost in $group
-             ...Object.fromEntries(
-                Object.keys(db.collection('communities').findOne({}) || {}).map(k => [k, `$rawCommunity.${k}`])
-            ),
-             usersList: 0, // This was the cause of the error
-          },
+          data: '$rawCommunity',
           members: '$members',
-        }
-      },
-      // Corrected Stage 7
-      {
-        $addFields: {
-           "data": "$rawCommunity"
-        }
-      },
-      {
-        $project: {
-            _id: 0,
-            id: { $toString: '$_id' },
-            name: '$name',
-            communityProfileImage: '$communityProfileImage',
-            memberCount: { $size: '$members' },
-            members: '$members',
-            data: {
-                $let: {
-                    vars: {
-                        communityData: "$data"
-                    },
-                    in: {
-                        $function: {
-                            body: `function(data) {
-                                delete data.usersList;
-                                delete data.memberInfo;
-                                delete data.memberRole;
-                                return data;
-                            }`,
-                            args: ["$$communityData"],
-                            lang: "js"
-                        }
-                    }
-                }
-            }
         }
       },
       { $sort: { name: 1 } }
     ]).toArray();
     
+    // Clean up the data in JavaScript to avoid projection errors
+    const cleanedCommunities = communitiesWithMembers.map(community => {
+        if (community.data) {
+            delete community.data.usersList;
+            delete community.data.memberInfo;
+            delete community.data.memberRole;
+        }
+        return community;
+    });
+
     // Convert date objects to ISO strings
-    return JSON.parse(JSON.stringify(communitiesWithMembers));
+    return JSON.parse(JSON.stringify(cleanedCommunities));
 
   } catch (error) {
     console.error('Failed to get communities with members:', error);
