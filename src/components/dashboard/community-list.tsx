@@ -26,6 +26,7 @@ interface CommunityListProps {
   communities: Community[];
   selectedCommunityId: string;
   onSelectCommunity: (id: string) => void;
+  showExport: boolean;
 }
 
 type ExportStatus = 'idle' | 'confirming' | 'exporting' | 'success' | 'error';
@@ -54,6 +55,7 @@ export function CommunityList({
   communities,
   selectedCommunityId,
   onSelectCommunity,
+  showExport,
 }: CommunityListProps) {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
@@ -62,6 +64,7 @@ export function CommunityList({
   const [exportState, setExportState] = useState<ExportState>(INITIAL_EXPORT_STATE);
   
   const checkAllExportStatus = useCallback(async () => {
+    if (!showExport) return;
     const statusMap: Record<string, boolean> = {};
     const checkingMap: Record<string, boolean> = {};
     for (const community of communities) {
@@ -80,7 +83,7 @@ export function CommunityList({
     
     setExportedStatusMap(statusMap);
     setCheckingExportStatus({});
-  }, [communities]);
+  }, [communities, showExport]);
 
   useEffect(() => {
     if(communities.length > 0){
@@ -177,6 +180,7 @@ export function CommunityList({
                             >
                                 <ClipboardCopy className="h-4 w-4" />
                             </Button>
+                            {showExport && (
                              <Button
                                 variant="ghost"
                                 size="icon"
@@ -186,6 +190,7 @@ export function CommunityList({
                             >
                                 {checkingExportStatus[community.id] ? <Loader2 className="h-4 w-4 animate-spin"/> : <UploadCloud className="h-4 w-4 text-primary" />}
                             </Button>
+                            )}
                           </div>
                           </div>
                         </div>
@@ -226,7 +231,7 @@ export function CommunityList({
                 
                 {(exportState.status === 'exporting' || exportState.status === 'success') && (
                     <div className="py-4 space-y-4">
-                        <Progress value={exportState.status === 'exporting' ? undefined : exportState.progress.value} className="w-full" />
+                        <Progress value={exportState.status === 'success' ? 100 : undefined} className="w-full" />
                         <div className="text-center text-sm text-muted-foreground">
                             <p className="font-semibold">{exportState.progress.step}</p>
                             <p>{exportState.progress.detail}</p>

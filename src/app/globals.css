@@ -76,6 +76,40 @@ body {
     --sidebar-border: 259 15% 25%;
     --sidebar-ring: 259 34% 63%;
   }
+  .theme-fire {
+    --background: 20 14% 4%;
+    --foreground: 20 5% 94%;
+    --card: 20 14% 8%;
+    --card-foreground: 20 5% 94%;
+    --popover: 20 14% 4%;
+    --popover-foreground: 20 5% 94%;
+    --primary: 35 92% 55%;
+    --primary-foreground: 20 14% 4%;
+    --secondary: 20 14% 12%;
+    --secondary-foreground: 20 5% 94%;
+    --muted: 20 14% 12%;
+    --muted-foreground: 20 5% 60%;
+    --accent: 35 92% 55%;
+    --accent-foreground: 20 14% 4%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 20 5% 94%;
+    --border: 20 14% 15%;
+    --input: 20 14% 15%;
+    --ring: 35 92% 55%;
+    --chart-1: 35 92% 55%;
+    --chart-2: 20 80% 50%;
+    --chart-3: 0 72% 51%;
+    --chart-4: 40 90% 60%;
+    --chart-5: 15 85% 55%;
+    --sidebar-background: 20 14% 6%;
+    --sidebar-foreground: 20 5% 94%;
+    --sidebar-primary: 35 92% 55%;
+    --sidebar-primary-foreground: 20 14% 4%;
+    --sidebar-accent: 20 14% 12%;
+    --sidebar-accent-foreground: 20 5% 94%;
+    --sidebar-border: 20 14% 15%;
+    --sidebar-ring: 35 92% 55%;
+  }
 }
 
 @layer base {

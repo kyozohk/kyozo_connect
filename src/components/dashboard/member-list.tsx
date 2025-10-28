@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { getMembers } from '@/app/actions';
+import { getFirestoreMembers } from '@/app/fire/actions';
 import { Member } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,15 +15,18 @@ import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Users } from 'lucide-react';
+import { DataSource } from './dashboard-client';
 
 export function MemberList({ 
     communityId, 
     onSelectMember,
-    initialSelectedMemberId
+    initialSelectedMemberId,
+    dataSource,
 }: { 
     communityId: string;
     onSelectMember: (member: Member | null) => void;
     initialSelectedMemberId?: string;
+    dataSource: DataSource;
 }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(false);
@@ -39,7 +43,8 @@ export function MemberList({
     }
     setLoading(true);
     try {
-      const fetchedMembers = await getMembers(cId);
+      const fetcher = dataSource === 'firestore' ? getFirestoreMembers : getMembers;
+      const fetchedMembers = await fetcher(cId);
       setMembers(fetchedMembers);
       
       if (memberIdToSelect) {
@@ -47,7 +52,6 @@ export function MemberList({
         onSelectMember(memberToSelect || null);
         setSelectedMemberId(memberIdToSelect);
       } else if (selectedMemberId && !fetchedMembers.some(m => m.id === selectedMemberId)) {
-        // If the previously selected member is not in the new list, deselect them
         onSelectMember(null);
         setSelectedMemberId(undefined);
       }
@@ -61,7 +65,7 @@ export function MemberList({
     } finally {
       setLoading(false);
     }
-  }, [onSelectMember, toast, selectedMemberId]);
+  }, [onSelectMember, toast, selectedMemberId, dataSource]);
 
   useEffect(() => {
     fetchAndSetMembers(communityId, initialSelectedMemberId);

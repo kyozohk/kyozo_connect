@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { getMessagesForMember, summarizeMessages } from '@/app/actions';
+import { getFirestoreMessagesForMember } from '@/app/fire/actions';
 import { useAuth } from '@/hooks/use-auth';
 import { Message, Member } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -19,8 +20,9 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import { formatDistanceToNow } from 'date-fns';
+import { DataSource } from './dashboard-client';
 
-export function MessageList({ communityId, communityName, member }: { communityId: string, communityName?: string, member: Member | null }) {
+export function MessageList({ communityId, communityName, member, dataSource }: { communityId: string, communityName?: string, member: Member | null, dataSource: DataSource }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState('');
@@ -33,8 +35,8 @@ export function MessageList({ communityId, communityName, member }: { communityI
   const currentMemberId = useRef<string | null | undefined>(null);
 
   useEffect(() => {
-    // Only fetch messages if the member has changed
-    if (member?.id !== currentMemberId.current) {
+    // Only fetch messages if the member has changed OR if the datasource has changed for the same member
+    if (member?.id !== currentMemberId.current || dataSource) {
         currentMemberId.current = member?.id;
         if (!communityId || !member?.id) {
           setMessages([]);
@@ -42,7 +44,8 @@ export function MessageList({ communityId, communityName, member }: { communityI
           return;
         }
         setLoading(true);
-        getMessagesForMember(communityId, member.id)
+        const fetcher = dataSource === 'firestore' ? getFirestoreMessagesForMember : getMessagesForMember;
+        fetcher(communityId, member.id)
           .then((msgs) => {
             setMessages(msgs);
           })
@@ -56,7 +59,7 @@ export function MessageList({ communityId, communityName, member }: { communityI
           })
           .finally(() => setLoading(false));
     }
-  }, [communityId, member, toast]);
+  }, [communityId, member, toast, dataSource]);
   
   const handleSummarize = async () => {
     if (!user || messages.length === 0 || !member) return;
@@ -91,14 +94,21 @@ export function MessageList({ communityId, communityName, member }: { communityI
     message.text && message.text.toLowerCase().includes(searchQuery.toLowerCase())
   ), [messages, searchQuery]);
 
+  const messageListTitle = dataSource === 'firestore' 
+    ? 'Community Channel' 
+    : member 
+    ? `Messages with ${member.displayName}` 
+    : 'Messages';
+
+
   return (
     <div className="flex h-full flex-col bg-card">
       <header className="flex items-center justify-between border-b p-4">
         <div className="flex-1">
-          <h2 className="text-lg font-semibold tracking-tight">{member ? `Messages with ${member.displayName}` : 'Messages'}</h2>
+          <h2 className="text-lg font-semibold tracking-tight">{messageListTitle}</h2>
           {member && <p className="text-sm text-muted-foreground">{communityName}</p>}
         </div>
-        <Button onClick={handleSummarize} disabled={isSummarizing || messages.length === 0} size="sm">
+        <Button onClick={handleSummarize} disabled={isSummarizing || messages.length === 0 || !member} size="sm">
           {isSummarizing ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
@@ -129,11 +139,17 @@ export function MessageList({ communityId, communityName, member }: { communityI
                   </div>
                 </div>
               ))
-            ) : !member ? (
+            ) : !member && dataSource === 'mongodb' ? (
                 <div className="flex flex-col h-full items-center justify-center text-center p-8 mt-10">
                     <MessageSquare className="w-16 h-16 text-muted-foreground/50 mb-4" />
                     <h3 className="text-lg font-semibold">Select a member</h3>
                     <p className="text-muted-foreground">Choose a member from the list to view their messages.</p>
+                </div>
+            ) : !communityId ? (
+                 <div className="flex flex-col h-full items-center justify-center text-center p-8 mt-10">
+                    <MessageSquare className="w-16 h-16 text-muted-foreground/50 mb-4" />
+                    <h3 className="text-lg font-semibold">Select a Community</h3>
+                    <p className="text-muted-foreground">Choose a community to view messages.</p>
                 </div>
             ) : filteredMessages.length > 0 ? (
               filteredMessages.map((message) => (
@@ -163,7 +179,7 @@ export function MessageList({ communityId, communityName, member }: { communityI
               ))
             ) : (
               <div className="flex h-full items-center justify-center">
-                <p className="text-muted-foreground">No messages found for this member.</p>
+                <p className="text-muted-foreground">No messages found.</p>
               </div>
             )}
           </div>
@@ -174,7 +190,7 @@ export function MessageList({ communityId, communityName, member }: { communityI
           <DialogHeader>
             <DialogTitle>Conversation Summary</DialogTitle>
             <DialogDescription>
-              {`Here's a quick summary of the messages with ${member?.displayName} in ${communityName}.`}
+              {`Here's a quick summary of the messages in ${communityName}.`}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">

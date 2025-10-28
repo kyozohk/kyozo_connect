@@ -9,14 +9,18 @@ import { MemberList } from './member-list';
 import { MessageList } from './message-list';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 
+export type DataSource = 'mongodb' | 'firestore';
+
 export function DashboardClient({
   communities,
   initialSelectedCommunityId,
   initialSelectedMemberId,
+  dataSource,
 }: {
   communities: Community[];
   initialSelectedCommunityId: string;
   initialSelectedMemberId?: string;
+  dataSource: DataSource;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -56,7 +60,7 @@ export function DashboardClient({
     <div className="flex h-screen flex-col bg-background">
       <header className="flex h-16 items-center justify-between border-b px-4 lg:px-6">
         <h1 className="text-xl font-bold tracking-tight text-primary">
-          KyozoConnect
+          KyozoConnect <span className="text-sm font-normal text-muted-foreground">{dataSource === 'firestore' ? '🔥' : '🧊'}</span>
         </h1>
         <UserNav />
       </header>
@@ -67,24 +71,27 @@ export function DashboardClient({
               communities={communities}
               selectedCommunityId={selectedCommunityId}
               onSelectCommunity={handleSelectCommunity}
+              showExport={dataSource === 'mongodb'}
             />
           </ResizablePanel>
           <ResizableHandle withHandle />
           <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
             <MemberList 
-              key={selectedCommunityId} 
+              key={`${dataSource}-${selectedCommunityId}`}
               communityId={selectedCommunityId}
               onSelectMember={handleSelectMember}
               initialSelectedMemberId={initialSelectedMemberId}
+              dataSource={dataSource}
               />
           </ResizablePanel>
           <ResizableHandle withHandle />
           <ResizablePanel defaultSize={45} minSize={30}>
              <MessageList 
-                key={`${selectedCommunityId}-${selectedMember?.id}`}
+                key={`${dataSource}-${selectedCommunityId}-${selectedMember?.id}`}
                 communityId={selectedCommunityId} 
                 communityName={selectedCommunity?.name}
                 member={selectedMember}
+                dataSource={dataSource}
               />
           </ResizablePanel>
         </ResizablePanelGroup>

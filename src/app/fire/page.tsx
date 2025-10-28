@@ -1,16 +1,15 @@
-
-import { getCommunities } from '@/app/actions';
+import { getFirestoreCommunities } from '@/app/fire/actions';
 import { DashboardClient } from '@/components/dashboard/dashboard-client';
 import { Community } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
-export default async function InboxPage({
+export default async function FirePage({
   searchParams,
 }: {
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
-  const communities: Community[] = await getCommunities();
+  const communities: Community[] = await getFirestoreCommunities();
   
   const communityId = typeof searchParams.communityId === 'string' ? searchParams.communityId : '';
   const memberId = typeof searchParams.memberId === 'string' ? searchParams.memberId : '';
@@ -20,14 +19,14 @@ export default async function InboxPage({
   const initialSelectedCommunityId =
     communityId && isValidCommunityId
       ? communityId
-      : ''; // Default to empty string if no valid community is selected
+      : '';
 
   return (
     <DashboardClient
       communities={communities}
       initialSelectedCommunityId={initialSelectedCommunityId}
       initialSelectedMemberId={memberId}
-      dataSource="mongodb"
+      dataSource="firestore"
     />
   );
 }
