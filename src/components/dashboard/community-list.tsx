@@ -6,27 +6,49 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { ClipboardCopy, UploadCloud } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Users, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog"
 import { isCommunityExported, migrateCommunityToFirestore } from '@/app/actions';
+import { Progress } from '@/components/ui/progress';
 
 interface CommunityListProps {
   communities: Community[];
   selectedCommunityId: string;
   onSelectCommunity: (id: string) => void;
 }
+
+type ExportStatus = 'idle' | 'confirming' | 'exporting' | 'success' | 'error';
+
+interface ExportState {
+  status: ExportStatus;
+  community: Community | null;
+  progress: {
+    step: string;
+    detail: string;
+    value: number;
+  };
+  error: string | null;
+  destination: 'Development' | 'Production';
+}
+
+const INITIAL_EXPORT_STATE: ExportState = {
+  status: 'idle',
+  community: null,
+  progress: { step: '', detail: '', value: 0 },
+  error: null,
+  destination: process.env.NODE_ENV === 'production' ? 'Production' : 'Development',
+};
 
 export function CommunityList({
   communities,
@@ -35,24 +57,36 @@ export function CommunityList({
 }: CommunityListProps) {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
-  const [exportedStatus, setExportedStatus] = useState<Record<string, boolean>>({});
-  const [exportingId, setExportingId] = useState<string | null>(null);
-  const [showExportDialog, setShowExportDialog] = useState(false);
-  const [communityToExport, setCommunityToExport] = useState<Community | null>(null);
-
-  useEffect(() => {
-    const checkExportStatus = async () => {
-      const statusMap: Record<string, boolean> = {};
-      for (const community of communities) {
-        statusMap[community.id] = await isCommunityExported(community.id);
-      }
-      setExportedStatus(statusMap);
-    };
-    if(communities.length > 0){
-        checkExportStatus();
+  const [exportedStatusMap, setExportedStatusMap] = useState<Record<string, boolean>>({});
+  const [checkingExportStatus, setCheckingExportStatus] = useState<Record<string, boolean>>({});
+  const [exportState, setExportState] = useState<ExportState>(INITIAL_EXPORT_STATE);
+  
+  const checkAllExportStatus = useCallback(async () => {
+    const statusMap: Record<string, boolean> = {};
+    const checkingMap: Record<string, boolean> = {};
+    for (const community of communities) {
+      checkingMap[community.id] = true;
+      setCheckingExportStatus({...checkingMap});
     }
+
+    await Promise.all(communities.map(async (community) => {
+        try {
+            const isExported = await isCommunityExported(community.id);
+            statusMap[community.id] = isExported;
+        } catch {
+            statusMap[community.id] = false;
+        }
+    }));
+    
+    setExportedStatusMap(statusMap);
+    setCheckingExportStatus({});
   }, [communities]);
 
+  useEffect(() => {
+    if(communities.length > 0){
+      checkAllExportStatus();
+    }
+  }, [communities, checkAllExportStatus]);
 
   const handleCopy = (community: Community) => {
     navigator.clipboard.writeText(JSON.stringify(community.data, null, 2));
@@ -63,43 +97,51 @@ export function CommunityList({
   };
 
   const confirmExport = (community: Community) => {
-    setCommunityToExport(community);
-    setShowExportDialog(true);
+    setExportState({
+        ...INITIAL_EXPORT_STATE,
+        status: 'confirming',
+        community: community,
+        destination: process.env.NODE_ENV === 'production' ? 'Production' : 'Development',
+    });
   }
+  
+  const handleProgressUpdate = useCallback(async (progress: {step: string, detail: string, value: number}) => {
+    setExportState(prevState => ({
+        ...prevState,
+        progress: progress,
+    }));
+  }, []);
 
   const handleExport = async () => {
-    if (!communityToExport) return;
+    if (!exportState.community) return;
 
-    setExportingId(communityToExport.id);
-    setShowExportDialog(false);
-
+    setExportState(prevState => ({ ...prevState, status: 'exporting', error: null, progress: { step: 'Initiating...', detail: '', value: 0 } }));
+    
     try {
-      const result = await migrateCommunityToFirestore(communityToExport.id);
+      const result = await migrateCommunityToFirestore(exportState.community.id, handleProgressUpdate);
        if (result.success) {
-        toast({
-          title: 'Migration Successful',
-          description: result.message,
-        });
-        setExportedStatus(prev => ({...prev, [communityToExport.id]: true}));
+        setExportState(prevState => ({ ...prevState, status: 'success' }));
+        setExportedStatusMap(prev => ({...prev, [exportState.community!.id]: true}));
       } else {
         throw new Error(result.message);
       }
     } catch (error: any) {
-       toast({
-        variant: 'destructive',
-        title: 'Migration Failed',
-        description: error.message || 'An unexpected error occurred.',
-      });
-    } finally {
-        setExportingId(null);
-        setCommunityToExport(null);
+       setExportState(prevState => ({ ...prevState, status: 'error', error: error.message || 'An unexpected error occurred.' }));
     }
   };
-
+  
+  const closeDialog = () => {
+    if (exportState.status !== 'exporting') {
+        setExportState(INITIAL_EXPORT_STATE);
+    }
+  }
 
   const filteredCommunities = communities.filter((community) =>
     community.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  
+  const isExporting = exportState.status === 'exporting';
+  const isAnyCommunityExporting = exportState.status === 'exporting' || exportState.status === 'confirming';
 
   return (
     <div className="flex h-full flex-col bg-card">
@@ -144,10 +186,10 @@ export function CommunityList({
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 flex-shrink-0"
-                                disabled={exportedStatus[community.id] || exportingId === community.id}
+                                disabled={exportedStatusMap[community.id] || isAnyCommunityExporting || checkingExportStatus[community.id]}
                                 onClick={(e) => { e.stopPropagation(); confirmExport(community); }}
                             >
-                                {exportingId === community.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <UploadCloud className="h-4 w-4" />}
+                                {checkingExportStatus[community.id] ? <Loader2 className="h-4 w-4 animate-spin"/> : <UploadCloud className="h-4 w-4 text-primary" />}
                             </Button>
                           </div>
                           </div>
@@ -160,23 +202,65 @@ export function CommunityList({
             )}
             </div>
         </ScrollArea>
-        <AlertDialog open={showExportDialog} onOpenChange={setShowExportDialog}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Export Community to Firestore?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This will migrate the community &quot;{communityToExport?.name}&quot; and all its data from MongoDB to Firestore.
-                        This includes approximately {communityToExport?.memberCount} members and their associated messages. This action cannot be undone.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setCommunityToExport(null)}>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleExport} disabled={exportingId !== null}>
-                        {exportingId ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Exporting...</> : "Confirm Export"}
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+        <Dialog open={exportState.status !== 'idle'} onOpenChange={(open) => !open && closeDialog()}>
+            <DialogContent onPointerDownOutside={(e) => isExporting && e.preventDefault()} onInteractOutside={(e) => isExporting && e.preventDefault()}>
+                <DialogHeader>
+                    <DialogTitle>
+                        {exportState.status === 'confirming' && 'Confirm Migration'}
+                        {exportState.status === 'exporting' && 'Migrating Community'}
+                        {exportState.status === 'success' && 'Migration Complete'}
+                        {exportState.status === 'error' && 'Migration Failed'}
+                    </DialogTitle>
+                    <DialogDescription>
+                         {exportState.status === 'confirming' && `Migrate "${exportState.community?.name}" and all its data to the ${exportState.destination} Firestore database.`}
+                         {(exportState.status === 'exporting' || exportState.status === 'success') && `Exporting "${exportState.community?.name}" to the ${exportState.destination} environment.`}
+                         {exportState.status === 'error' && `Something went wrong while migrating "${exportState.community?.name}".`}
+                    </DialogDescription>
+                </DialogHeader>
+
+                {exportState.status === 'confirming' && (
+                    <div className="py-4 text-sm">
+                        <p>This will perform the following actions:</p>
+                        <ul className="list-disc pl-5 mt-2 space-y-1 text-muted-foreground">
+                            <li>Register all {exportState.community?.memberCount} members in Firebase Authentication if they don't exist.</li>
+                            <li>Copy community details, memberships, and messages to Firestore.</li>
+                            <li>This action cannot be undone.</li>
+                        </ul>
+                    </div>
+                )}
+                
+                {(exportState.status === 'exporting' || exportState.status === 'success') && (
+                    <div className="py-4 space-y-4">
+                        <Progress value={exportState.progress.value} className="w-full" />
+                        <div className="text-center text-sm text-muted-foreground">
+                            <p className="font-semibold">{exportState.progress.step}</p>
+                            <p>{exportState.progress.detail}</p>
+                        </div>
+                    </div>
+                )}
+
+                {exportState.status === 'error' && (
+                    <div className="py-4 text-destructive text-sm bg-destructive/10 p-3 rounded-md">
+                        <p className="font-semibold">Error Details:</p>
+                        <p>{exportState.error}</p>
+                    </div>
+                )}
+                
+                <DialogFooter>
+                    {exportState.status === 'confirming' && (
+                        <>
+                            <Button variant="outline" onClick={closeDialog}>Cancel</Button>
+                            <Button onClick={handleExport}>
+                                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Confirm & Migrate"}
+                            </Button>
+                        </>
+                    )}
+                    {(exportState.status === 'success' || exportState.status === 'error') && (
+                         <Button onClick={closeDialog}>Close</Button>
+                    )}
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
