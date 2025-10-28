@@ -209,6 +209,13 @@ export async function migrateCommunityToFirestore(communityId: string) {
         let firebaseUser: UserRecord;
         try {
           firebaseUser = await adminAuth.getUserByEmail(user.email);
+          // If user exists, update them with potentially new info
+          await adminAuth.updateUser(firebaseUser.uid, {
+              displayName: user.fullName || user.displayName,
+              photoURL: user.profileImage || user.photoURL,
+              phoneNumber: user.phoneNumber,
+           });
+           firebaseUser = await adminAuth.getUser(firebaseUser.uid); // re-fetch to get updated record
         } catch (e: any) {
           if (e.code === 'auth/user-not-found') {
             firebaseUser = await adminAuth.createUser({
@@ -219,13 +226,7 @@ export async function migrateCommunityToFirestore(communityId: string) {
               phoneNumber: user.phoneNumber, // Include phone number
             });
           } else {
-            // If user exists, update them with potentially new info
-             await adminAuth.updateUser(e.uid, {
-                displayName: user.fullName || user.displayName,
-                photoURL: user.profileImage || user.photoURL,
-                phoneNumber: user.phoneNumber,
-             });
-            firebaseUser = await adminAuth.getUser(e.uid);
+             throw e; // re-throw other errors
           }
         }
         return { mongoId: user._id.toString(), firebaseUid: firebaseUser.uid };
