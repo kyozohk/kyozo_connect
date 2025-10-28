@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Community } from '@/types';
@@ -335,7 +336,7 @@ export function CommunityList({
                             <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                              <Button
                                 variant="ghost"
-                                size="icon"
+                                size="sm"
                                 className="h-8 w-8 flex-shrink-0"
                                 onClick={(e) => { e.stopPropagation(); handleCopy(JSON.stringify(community.data, null, 2), `Community data for "${community.name}" has been copied.`); }}
                             >
@@ -345,21 +346,21 @@ export function CommunityList({
                              <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 flex-shrink-0"
+                                className="h-9 w-9 flex-shrink-0"
                                 disabled={exportedStatusMap[community.id] || isProcessing || checkingExportStatus[community.id]}
                                 onClick={(e) => { e.stopPropagation(); confirmExport(community); }}
                             >
-                                {checkingExportStatus[community.id] ? <Loader2 className="h-4 w-4 animate-spin"/> : <UploadCloud className="h-4 w-4 text-primary" />}
+                                {checkingExportStatus[community.id] ? <Loader2 className="h-4 w-4 animate-spin"/> : <UploadCloud className="h-5 w-5 text-primary" />}
                             </Button>
                             ) : (
                              <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 flex-shrink-0"
+                                className="h-9 w-9 flex-shrink-0"
                                 disabled={isProcessing}
                                 onClick={(e) => { e.stopPropagation(); confirmDelete(community); }}
                             >
-                                <Trash2 className="h-4 w-4 text-destructive" />
+                                <Trash2 className="h-5 w-5 text-destructive" />
                             </Button>
                             )}
                           </div>
