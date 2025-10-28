@@ -161,3 +161,58 @@ export async function getFirestoreMessagesForMember(communityId: string, memberI
         return [];
     }
 }
+
+async function deleteCollection(collectionRef: FirebaseFirestore.CollectionReference, batchSize: number) {
+    const query = collectionRef.limit(batchSize);
+
+    return new Promise((resolve, reject) => {
+        deleteQueryBatch(query, resolve).catch(reject);
+    });
+
+    async function deleteQueryBatch(query: FirebaseFirestore.Query, resolve: (value: unknown) => void) {
+        const snapshot = await query.get();
+
+        if (snapshot.size === 0) {
+            return resolve(0);
+        }
+
+        const batch = collectionRef.firestore.batch();
+        snapshot.docs.forEach((doc) => {
+            batch.delete(doc.ref);
+        });
+        await batch.commit();
+
+        process.nextTick(() => {
+            deleteQueryBatch(query, resolve);
+        });
+    }
+}
+
+export async function deleteCommunityFromFirestore(communityId: string) {
+    const adminDb = await getAdminDb();
+    try {
+        const communityRef = adminDb.collection('communities').doc(communityId);
+        
+        // 1. Delete messages subcollection
+        const messagesRef = communityRef.collection('messages');
+        await deleteCollection(messagesRef, 50);
+
+        // 2. Delete memberships
+        const membershipsQuery = adminDb.collection('memberships').where('communityId', '==', communityId);
+        const membershipsSnapshot = await membershipsQuery.get();
+        const membershipBatch = adminDb.batch();
+        membershipsSnapshot.docs.forEach(doc => {
+            membershipBatch.delete(doc.ref);
+        });
+        await membershipBatch.commit();
+        
+        // 3. Delete the community document itself
+        await communityRef.delete();
+
+        return { success: true, message: `Community with ID ${communityId} deleted successfully.` };
+
+    } catch (error: any) {
+        console.error(`Failed to delete community ${communityId} from Firestore:`, error);
+        return { success: false, message: error.message || 'An unknown error occurred during deletion.' };
+    }
+}

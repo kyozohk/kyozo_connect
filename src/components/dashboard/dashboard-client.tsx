@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useCallback } from 'react';
@@ -31,11 +32,14 @@ export function DashboardClient({
   const [selectedCommunityId, setSelectedCommunityId] = useState(initialSelectedCommunityId);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 
-  const handleSelectCommunity = (communityId: string) => {
-    setSelectedCommunityId(communityId);
+  const handleSelectCommunity = (communityId: string | null) => {
+    const newId = communityId === selectedCommunityId ? null : communityId;
+    setSelectedCommunityId(newId || '');
     setSelectedMember(null); 
     const newSearchParams = new URLSearchParams();
-    newSearchParams.set('communityId', communityId);
+    if (newId) {
+      newSearchParams.set('communityId', newId);
+    }
     router.push(`${pathname}?${newSearchParams.toString()}`);
   };
 

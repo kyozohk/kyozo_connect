@@ -5,7 +5,7 @@ import { Community } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { ClipboardCopy, UploadCloud } from 'lucide-react';
+import { ClipboardCopy, UploadCloud, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect, useCallback } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -20,33 +20,28 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { isCommunityExported, migrateCommunityToFirestore } from '@/app/actions';
+import { deleteCommunityFromFirestore } from '@/app/fire/actions';
 import { Progress } from '@/components/ui/progress';
 
 interface CommunityListProps {
   communities: Community[];
   selectedCommunityId: string;
-  onSelectCommunity: (id: string) => void;
+  onSelectCommunity: (id: string | null) => void;
   showExport: boolean;
 }
 
-type ExportStatus = 'idle' | 'confirming' | 'exporting' | 'success' | 'error';
+type DialogStatus = 'idle' | 'confirming-export' | 'exporting' | 'export-success' | 'export-error' | 'confirming-delete' | 'deleting' | 'delete-success' | 'delete-error';
 
-interface ExportState {
-  status: ExportStatus;
+interface DialogState {
+  status: DialogStatus;
   community: Community | null;
-  progress: {
-    step: string;
-    detail: string;
-    value: number;
-  };
   error: string | null;
   destination: 'Development' | 'Production';
 }
 
-const INITIAL_EXPORT_STATE: ExportState = {
+const INITIAL_DIALOG_STATE: DialogState = {
   status: 'idle',
   community: null,
-  progress: { step: '', detail: '', value: 0 },
   error: null,
   destination: process.env.NODE_ENV === 'production' ? 'Production' : 'Development',
 };
@@ -61,7 +56,7 @@ export function CommunityList({
   const [searchQuery, setSearchQuery] = useState('');
   const [exportedStatusMap, setExportedStatusMap] = useState<Record<string, boolean>>({});
   const [checkingExportStatus, setCheckingExportStatus] = useState<Record<string, boolean>>({});
-  const [exportState, setExportState] = useState<ExportState>(INITIAL_EXPORT_STATE);
+  const [dialogState, setDialogState] = useState<DialogState>(INITIAL_DIALOG_STATE);
   
   const checkAllExportStatus = useCallback(async () => {
     if (!showExport) return;
@@ -86,10 +81,10 @@ export function CommunityList({
   }, [communities, showExport]);
 
   useEffect(() => {
-    if(communities.length > 0){
+    if(communities.length > 0 && showExport){
       checkAllExportStatus();
     }
-  }, [communities, checkAllExportStatus]);
+  }, [communities, checkAllExportStatus, showExport]);
 
   const handleCopy = (community: Community) => {
     navigator.clipboard.writeText(JSON.stringify(community.data, null, 2));
@@ -100,37 +95,66 @@ export function CommunityList({
   };
 
   const confirmExport = (community: Community) => {
-    setExportState({
-        ...INITIAL_EXPORT_STATE,
-        status: 'confirming',
+    setDialogState({
+        ...INITIAL_DIALOG_STATE,
+        status: 'confirming-export',
         community: community,
         destination: process.env.NODE_ENV === 'production' ? 'Production' : 'Development',
     });
   }
 
-  const handleExport = async () => {
-    if (!exportState.community) return;
+  const confirmDelete = (community: Community) => {
+    setDialogState({
+        ...INITIAL_DIALOG_STATE,
+        status: 'confirming-delete',
+        community: community,
+    });
+  }
 
-    setExportState(prevState => ({ ...prevState, status: 'exporting', error: null, progress: { step: 'Initiating...', detail: 'Please wait, this may take a few minutes.', value: 0 } }));
+  const handleExport = async () => {
+    if (!dialogState.community) return;
+
+    setDialogState(prevState => ({ ...prevState, status: 'exporting', error: null }));
     
     try {
-      // We can't pass a function to a server action, so we won't get granular progress.
-      // We just await the final result.
-      const result = await migrateCommunityToFirestore(exportState.community.id);
+      const result = await migrateCommunityToFirestore(dialogState.community.id);
        if (result.success) {
-        setExportState(prevState => ({ ...prevState, status: 'success', progress: {...prevState.progress, step: "Complete", detail: result.message, value: 100 }}));
-        setExportedStatusMap(prev => ({...prev, [exportState.community!.id]: true}));
+        setDialogState(prevState => ({ ...prevState, status: 'export-success', error: result.message }));
+        setExportedStatusMap(prev => ({...prev, [dialogState.community!.id]: true}));
       } else {
         throw new Error(result.message);
       }
     } catch (error: any) {
-       setExportState(prevState => ({ ...prevState, status: 'error', error: error.message || 'An unexpected error occurred.' }));
+       setDialogState(prevState => ({ ...prevState, status: 'export-error', error: error.message || 'An unexpected error occurred.' }));
     }
   };
+
+  const handleDelete = async () => {
+    if (!dialogState.community) return;
+
+    setDialogState(prevState => ({ ...prevState, status: 'deleting', error: null }));
+
+    try {
+      const result = await deleteCommunityFromFirestore(dialogState.community.id);
+      if (result.success) {
+        setDialogState(prevState => ({ ...prevState, status: 'delete-success', error: result.message }));
+        onSelectCommunity(null); // Deselect the community
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error: any) {
+      setDialogState(prevState => ({...prevState, status: 'delete-error', error: error.message || 'An unexpected error occurred.' }));
+    }
+  }
   
   const closeDialog = () => {
-    if (exportState.status !== 'exporting') {
-        setExportState(INITIAL_EXPORT_STATE);
+    const status = dialogState.status;
+    if (status !== 'exporting' && status !== 'deleting') {
+        if(status === 'delete-success') {
+          // force a reload by navigating
+          window.location.reload();
+        }
+        setDialogState(INITIAL_DIALOG_STATE);
     }
   }
 
@@ -138,8 +162,119 @@ export function CommunityList({
     community.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
-  const isExporting = exportState.status === 'exporting';
-  const isAnyCommunityExporting = exportState.status === 'exporting' || exportState.status === 'confirming';
+  const isDialogActive = dialogState.status !== 'idle';
+  const isProcessing = dialogState.status === 'exporting' || dialogState.status === 'deleting';
+
+  const renderDialogContent = () => {
+    const { status, community, destination, error } = dialogState;
+
+    switch(status) {
+        case 'confirming-export':
+        case 'exporting':
+        case 'export-success':
+        case 'export-error':
+            return (
+                <>
+                <DialogHeader>
+                    <DialogTitle>
+                        {status === 'confirming-export' && 'Confirm Migration'}
+                        {status === 'exporting' && 'Migrating Community'}
+                        {status === 'export-success' && 'Migration Complete'}
+                        {status === 'export-error' && 'Migration Failed'}
+                    </DialogTitle>
+                    <DialogDescription>
+                         {status === 'confirming-export' && `Migrate "${community?.name}" and all its data to the ${destination} Firestore database.`}
+                         {(status === 'exporting' || status === 'export-success') && `Exporting "${community?.name}" to the ${destination} environment.`}
+                         {status === 'export-error' && `Something went wrong while migrating "${community?.name}".`}
+                    </DialogDescription>
+                </DialogHeader>
+                 {status === 'confirming-export' && (
+                    <div className="py-4 text-sm">
+                        <p>This will perform the following actions:</p>
+                        <ul className="list-disc pl-5 mt-2 space-y-1 text-muted-foreground">
+                            <li>Register all {community?.memberCount} members in Firebase Authentication if they don't exist.</li>
+                            <li>Copy community details, memberships, and messages to Firestore.</li>
+                            <li>This action cannot be undone.</li>
+                        </ul>
+                    </div>
+                )}
+                {(status === 'exporting' || status === 'export-success') && (
+                    <div className="py-4 space-y-4">
+                        <Progress value={status === 'export-success' ? 100 : undefined} className="w-full" />
+                        <div className="text-center text-sm text-muted-foreground">
+                            <p className="font-semibold">{status === 'exporting' ? 'Initiating...' : 'Complete'}</p>
+                            <p>{status === 'exporting' ? 'Please wait, this may take a few minutes.' : error}</p>
+                        </div>
+                    </div>
+                )}
+                {status === 'export-error' && (
+                    <div className="py-4 text-destructive text-sm bg-destructive/10 p-3 rounded-md">
+                        <p className="font-semibold">Error Details:</p>
+                        <p>{error}</p>
+                    </div>
+                )}
+                <DialogFooter>
+                    {status === 'confirming-export' && ( <> <Button variant="outline" onClick={closeDialog}>Cancel</Button> <Button onClick={handleExport}>Confirm & Migrate</Button> </> )}
+                    {status === 'exporting' && ( <Button disabled> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Migrating... </Button> )}
+                    {(status === 'export-success' || status === 'export-error') && ( <Button onClick={closeDialog}>Close</Button> )}
+                </DialogFooter>
+                </>
+            );
+        case 'confirming-delete':
+        case 'deleting':
+        case 'delete-success':
+        case 'delete-error':
+            return (
+                 <>
+                <DialogHeader>
+                    <DialogTitle>
+                        {status === 'confirming-delete' && 'Confirm Deletion'}
+                        {status === 'deleting' && 'Deleting Community'}
+                        {status === 'delete-success' && 'Deletion Complete'}
+                        {status === 'delete-error' && 'Deletion Failed'}
+                    </DialogTitle>
+                     <DialogDescription>
+                         {status === 'confirming-delete' && `This will permanently delete "${community?.name}" and all its data from Firestore.`}
+                         {(status === 'deleting' || status === 'delete-success') && `Deleting "${community?.name}" from Firestore.`}
+                         {status === 'delete-error' && `Something went wrong while deleting "${community?.name}".`}
+                    </DialogDescription>
+                </DialogHeader>
+                 {status === 'confirming-delete' && (
+                    <div className="py-4 text-sm text-destructive">
+                        <p>This action is irreversible and will delete:</p>
+                        <ul className="list-disc pl-5 mt-2 space-y-1">
+                            <li>The main community document.</li>
+                            <li>All messages in the community channel.</li>
+                            <li>All membership records for this community.</li>
+                        </ul>
+                    </div>
+                )}
+                {(status === 'deleting' || status === 'delete-success') && (
+                    <div className="py-4 space-y-4">
+                         <Progress value={status === 'delete-success' ? 100 : undefined} className="w-full" />
+                         <div className="text-center text-sm text-muted-foreground">
+                           <p>{status === 'deleting' ? 'Deleting, please wait...' : error}</p>
+                         </div>
+                    </div>
+                )}
+                {status === 'delete-error' && (
+                    <div className="py-4 text-destructive text-sm bg-destructive/10 p-3 rounded-md">
+                        <p className="font-semibold">Error Details:</p>
+                        <p>{error}</p>
+                    </div>
+                )}
+                 <DialogFooter>
+                    {status === 'confirming-delete' && ( <> <Button variant="outline" onClick={closeDialog}>Cancel</Button> <Button variant="destructive" onClick={handleDelete}>Confirm & Delete</Button> </> )}
+                    {status === 'deleting' && ( <Button variant="destructive" disabled> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting... </Button> )}
+                    {(status === 'delete-success' || status === 'delete-error') && ( <Button onClick={closeDialog}>Close</Button> )}
+                </DialogFooter>
+                </>
+            );
+        default:
+            return null;
+    }
+  }
+
 
   return (
     <div className="flex h-full flex-col bg-card">
@@ -156,10 +291,10 @@ export function CommunityList({
             <div className="space-y-1 p-2">
             {filteredCommunities.length > 0 ? (
                 filteredCommunities.map((community) => (
-                <div key={community.id} className="group relative flex items-center rounded-md"
-                  onClick={() => onSelectCommunity(community.id)}>
+                <div key={community.id} className="group relative">
                     <div
-                        className={`w-full justify-start flex-grow h-auto py-2 px-2 flex items-center cursor-pointer rounded-md ${selectedCommunityId === community.id ? 'bg-secondary' : ''}`}
+                        className={`w-full justify-start h-auto py-2 px-2 flex items-center cursor-pointer rounded-md ${selectedCommunityId === community.id ? 'bg-secondary' : ''}`}
+                        onClick={() => onSelectCommunity(community.id)}
                     >
                         <Avatar className="mr-3 h-8 w-8">
                             <AvatarImage src={community.communityProfileImage} alt={community.name} />
@@ -180,15 +315,25 @@ export function CommunityList({
                             >
                                 <ClipboardCopy className="h-4 w-4" />
                             </Button>
-                            {showExport && (
+                            {showExport ? (
                              <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 flex-shrink-0"
-                                disabled={exportedStatusMap[community.id] || isAnyCommunityExporting || checkingExportStatus[community.id]}
+                                disabled={exportedStatusMap[community.id] || isProcessing || checkingExportStatus[community.id]}
                                 onClick={(e) => { e.stopPropagation(); confirmExport(community); }}
                             >
                                 {checkingExportStatus[community.id] ? <Loader2 className="h-4 w-4 animate-spin"/> : <UploadCloud className="h-4 w-4 text-primary" />}
+                            </Button>
+                            ) : (
+                             <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 flex-shrink-0"
+                                disabled={isProcessing}
+                                onClick={(e) => { e.stopPropagation(); confirmDelete(community); }}
+                            >
+                                <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                             )}
                           </div>
@@ -202,69 +347,9 @@ export function CommunityList({
             )}
             </div>
         </ScrollArea>
-        <Dialog open={exportState.status !== 'idle'} onOpenChange={(open) => !open && closeDialog()}>
-            <DialogContent onPointerDownOutside={(e) => isExporting && e.preventDefault()} onInteractOutside={(e) => isExporting && e.preventDefault()}>
-                <DialogHeader>
-                    <DialogTitle>
-                        {exportState.status === 'confirming' && 'Confirm Migration'}
-                        {exportState.status === 'exporting' && 'Migrating Community'}
-                        {exportState.status === 'success' && 'Migration Complete'}
-                        {exportState.status === 'error' && 'Migration Failed'}
-                    </DialogTitle>
-                    <DialogDescription>
-                         {exportState.status === 'confirming' && `Migrate "${exportState.community?.name}" and all its data to the ${exportState.destination} Firestore database.`}
-                         {(exportState.status === 'exporting' || exportState.status === 'success') && `Exporting "${exportState.community?.name}" to the ${exportState.destination} environment.`}
-                         {exportState.status === 'error' && `Something went wrong while migrating "${exportState.community?.name}".`}
-                    </DialogDescription>
-                </DialogHeader>
-
-                {exportState.status === 'confirming' && (
-                    <div className="py-4 text-sm">
-                        <p>This will perform the following actions:</p>
-                        <ul className="list-disc pl-5 mt-2 space-y-1 text-muted-foreground">
-                            <li>Register all {exportState.community?.memberCount} members in Firebase Authentication if they don't exist.</li>
-                            <li>Copy community details, memberships, and messages to Firestore.</li>
-                            <li>This action cannot be undone.</li>
-                        </ul>
-                    </div>
-                )}
-                
-                {(exportState.status === 'exporting' || exportState.status === 'success') && (
-                    <div className="py-4 space-y-4">
-                        <Progress value={exportState.status === 'success' ? 100 : undefined} className="w-full" />
-                        <div className="text-center text-sm text-muted-foreground">
-                            <p className="font-semibold">{exportState.progress.step}</p>
-                            <p>{exportState.progress.detail}</p>
-                        </div>
-                    </div>
-                )}
-
-                {exportState.status === 'error' && (
-                    <div className="py-4 text-destructive text-sm bg-destructive/10 p-3 rounded-md">
-                        <p className="font-semibold">Error Details:</p>
-                        <p>{exportState.error}</p>
-                    </div>
-                )}
-                
-                <DialogFooter>
-                    {exportState.status === 'confirming' && (
-                        <>
-                            <Button variant="outline" onClick={closeDialog}>Cancel</Button>
-                            <Button onClick={handleExport}>
-                                Confirm & Migrate
-                            </Button>
-                        </>
-                    )}
-                     {exportState.status === 'exporting' && (
-                        <Button disabled>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Migrating...
-                        </Button>
-                    )}
-                    {(exportState.status === 'success' || exportState.status === 'error') && (
-                         <Button onClick={closeDialog}>Close</Button>
-                    )}
-                </DialogFooter>
+        <Dialog open={isDialogActive} onOpenChange={(open) => !open && closeDialog()}>
+            <DialogContent onPointerDownOutside={(e) => isProcessing && e.preventDefault()} onInteractOutside={(e) => isProcessing && e.preventDefault()}>
+                {renderDialogContent()}
             </DialogContent>
         </Dialog>
     </div>
