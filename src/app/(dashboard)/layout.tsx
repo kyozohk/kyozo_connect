@@ -2,7 +2,7 @@
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Loader2, BarChart3, DatabaseZap, Users, CreditCard, Settings, LogOut, LayoutGrid } from 'lucide-react';
+import { Loader2, BarChart3, DatabaseZap, Users, CreditCard, Settings, LogOut, LayoutGrid, Inbox } from 'lucide-react';
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter, SidebarTrigger, SidebarInset, useSidebar } from '@/components/ui/sidebar';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { signOut } from 'firebase/auth';
@@ -51,6 +51,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const navItems = [
     { href: '/analytics', icon: BarChart3, label: 'Analytics' },
     { href: '/communities', icon: LayoutGrid, label: 'Communities' },
+    { href: '/inbox', icon: Inbox, label: 'Inbox' },
     { href: '/migrate', icon: DatabaseZap, label: 'Migrate' },
     { href: '/firebase', icon: Users, label: 'Firebase Data' },
     { href: '/subscription', icon: CreditCard, label: 'Subscription' },
@@ -64,9 +65,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <SidebarHeader>
             <Button variant="ghost" className="h-auto p-0 w-full justify-start" onClick={toggleSidebar}>
                 {/* Expanded Logo */}
-                <Image src="/logo.png" alt="Kyozo Logo" width={120} height={34} className="group-data-[collapsible=icon]:hidden" />
+                <Image src="/logo.png" alt="Kyozo Logo" width={144} height={41} className="group-data-[collapsible=icon]:hidden" />
                 {/* Collapsed Icon */}
-                <Image src="/favicon.png" alt="Kyozo Icon" width={34} height={34} className="hidden group-data-[collapsible=icon]:block" />
+                <Image src="/favicon.png" alt="Kyozo Icon" width={41} height={41} className="hidden group-data-[collapsible=icon]:block" />
             </Button>
         </SidebarHeader>
         <SidebarContent>
