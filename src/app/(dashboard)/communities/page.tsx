@@ -1,11 +1,12 @@
 
+
 import { getPaginatedFirestoreCommunities } from '@/app/fire/actions';
 import { CommunityListClient } from '@/components/communities/community-list-client';
 import { Suspense } from 'react';
 
 const PAGE_SIZE = 30;
 
-export default async function CommunitiesPage({
+export default async function CommunitiesDashboardPage({
   searchParams,
 }: {
   searchParams?: { [key: string]: string | string[] | undefined };

@@ -3,14 +3,13 @@
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Loader2, BarChart3, DatabaseZap, Users, CreditCard, Settings, LogOut, LayoutGrid } from 'lucide-react';
+import { Loader2, BarChart3, DatabaseZap, Users, CreditCard, Settings, LogOut, LayoutGrid, Home } from 'lucide-react';
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -35,12 +34,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
     );
   }
+  
+  // Do not render the main dashboard layout for community-specific pages
+  if (pathname.startsWith('/dashboard/communities/')) {
+    return <div className="flex min-h-screen">{children}</div>;
+  }
+
 
   const fallback = user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email!.charAt(0).toUpperCase();
 
   const navItems = [
     { href: '/analytics', icon: BarChart3, label: 'Analytics' },
-    { href: '/communities', icon: LayoutGrid, label: 'Communities' },
+    { href: '/dashboard/communities', icon: LayoutGrid, label: 'Communities' },
     { href: '/migrate', icon: DatabaseZap, label: 'Migrate' },
     { href: '/firebase', icon: Users, label: 'Firebase Data' },
     { href: '/subscription', icon: CreditCard, label: 'Subscription' },
@@ -54,7 +59,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <SidebarHeader>
             <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold tracking-tight text-primary group-data-[collapsible=icon]:hidden">
-                    KyozoConnect
+                    Kyozo
                 </h1>
                 <SidebarTrigger className="ml-auto" />
             </div>
@@ -63,7 +68,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <SidebarMenu>
             {navItems.map((item) => (
                <SidebarMenuItem key={item.href}>
-                 <Link href={item.href} passHref legacyBehavior>
+                 <Link href={item.href}>
                     <SidebarMenuButton as="a" isActive={pathname === item.href} tooltip={item.label}>
                       <item.icon />
                       <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
