@@ -126,17 +126,21 @@ export async function getFirestoreMembers(communityId: string): Promise<Member[]
         const userRecord: UserRecord = await adminAuth.getUser(membership.userId);
         const joinedAt = membership.joinedAt?.toDate ? membership.joinedAt.toDate().toISOString() : new Date().toISOString();
 
+        // Correctly access nested fields from the membership document
+        const role = membership.participation?.role || membership.role || 'member';
+        const phoneNumber = membership.participation?.phoneNumber || userRecord.phoneNumber || '';
+
         return {
           id: userRecord.uid, 
           uid: userRecord.uid,
           displayName: userRecord.displayName || userRecord.email || 'Unknown User',
           photoURL: userRecord.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(userRecord.displayName || 'U')}`,
           email: userRecord.email || '',
-          phoneNumber: userRecord.phoneNumber || '',
-          role: membership.role,
+          phoneNumber: phoneNumber,
+          role: role,
           joinedAt: joinedAt,
           passwordInitialized: membership.passwordInitialized,
-          data: JSON.parse(JSON.stringify({ ...userRecord.toJSON(), role: membership.role, joinedAt: joinedAt })),
+          data: JSON.parse(JSON.stringify({ ...userRecord.toJSON(), ...membership })),
         };
       } catch (error: any) {
         if (error.code === 'auth/user-not-found') {
@@ -153,7 +157,7 @@ export async function getFirestoreMembers(communityId: string): Promise<Member[]
     members.sort((a, b) => {
         const roleOrder = { owner: 0, admin: 1, member: 2 };
         if (a.role !== b.role) {
-            return (roleOrder[a.role] || 2) - (roleOrder[b.role] || 2);
+            return (roleOrder[a.role as keyof typeof roleOrder] || 2) - (roleOrder[b.role as keyof typeof roleOrder] || 2);
         }
         return a.displayName.localeCompare(b.displayName);
     });
