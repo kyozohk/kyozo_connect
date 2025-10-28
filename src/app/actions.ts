@@ -210,12 +210,10 @@ export async function migrateCommunityToFirestore(communityId: string) {
     // ** BUG FIX: Get member ObjectIDs BEFORE sanitizing the community object **
     const memberMongoOids = (rawMongoCommunity.usersList || []).map((u: any) => u.userId).filter(Boolean);
     console.log(`[MIGRATION_LOG] Found 'usersList' with ${memberMongoOids.length} member ObjectIDs.`);
-    if (memberMongoOids.length === 0) {
-        console.warn(`[MIGRATION_WARN] The 'usersList' for community "${rawMongoCommunity.name}" is empty. No members or messages will be migrated.`);
-    }
-
-    // Fetch users from MongoDB using the correct ObjectIDs
-    const usersToMigrate = await db.collection('users').find({ _id: { $in: memberMongoOids } }).toArray();
+    
+    const usersToMigrate = memberMongoOids.length > 0 
+      ? await db.collection('users').find({ _id: { $in: memberMongoOids } }).toArray()
+      : [];
     console.log(`[MIGRATION_LOG] Matched ${usersToMigrate.length} users to migrate from the community's member list.`);
     
     // ** SANITIZE THE DATA **
@@ -327,7 +325,9 @@ export async function migrateCommunityToFirestore(communityId: string) {
     // 6. Migrate Messages
     const mongoChannels = await db.collection('channels').find({ community: new ObjectId(communityId) }).toArray();
     const mongoChannelIds = mongoChannels.map(c => c._id);
-    const mongoMessages = await db.collection('messages').find({ channel: { $in: mongoChannelIds } }).toArray();
+    const mongoMessages = mongoChannelIds.length > 0
+        ? await db.collection('messages').find({ channel: { $in: mongoChannelIds } }).toArray()
+        : [];
     console.log(`[MIGRATION_LOG] Found ${mongoMessages.length} messages to migrate.`);
 
     for (const message of mongoMessages) {
@@ -347,14 +347,14 @@ export async function migrateCommunityToFirestore(communityId: string) {
     console.log(`[MIGRATION_LOG] Prepared ${mongoMessages.length} message documents for batch write.`);
     
     await batch.commit();
-    console.log(`[MIGRATION_SUCCESS] Batch commit successful. Migration for "${mongoCommunity.name}" complete.`);
 
-    return { success: true, message: `Community '${mongoCommunity.name}' migrated successfully.` };
+    const summaryMessage = `Migrated 1 community, ${memberMongoIds.length} members, and ${mongoMessages.length} messages.`;
+    console.log(`[MIGRATION_SUCCESS] Batch commit successful. ${summaryMessage}`);
+
+    return { success: true, message: summaryMessage };
 
   } catch (error: any) {
     console.error('[MIGRATION_FAILED] An error occurred during migration:', error);
     return { success: false, message: error.message || 'An unknown error occurred during migration.' };
   }
 }
-
-    
