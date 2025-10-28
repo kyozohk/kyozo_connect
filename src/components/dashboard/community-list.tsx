@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Community } from '@/types';
@@ -6,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { ClipboardCopy, UploadCloud } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Users, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +18,6 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog"
 import { isCommunityExported, migrateCommunityToFirestore } from '@/app/actions';
 import { Progress } from '@/components/ui/progress';
@@ -104,23 +104,18 @@ export function CommunityList({
         destination: process.env.NODE_ENV === 'production' ? 'Production' : 'Development',
     });
   }
-  
-  const handleProgressUpdate = useCallback(async (progress: {step: string, detail: string, value: number}) => {
-    setExportState(prevState => ({
-        ...prevState,
-        progress: progress,
-    }));
-  }, []);
 
   const handleExport = async () => {
     if (!exportState.community) return;
 
-    setExportState(prevState => ({ ...prevState, status: 'exporting', error: null, progress: { step: 'Initiating...', detail: '', value: 0 } }));
+    setExportState(prevState => ({ ...prevState, status: 'exporting', error: null, progress: { step: 'Initiating...', detail: 'Please wait, this may take a few minutes.', value: 0 } }));
     
     try {
-      const result = await migrateCommunityToFirestore(exportState.community.id, handleProgressUpdate);
+      // We can't pass a function to a server action, so we won't get granular progress.
+      // We just await the final result.
+      const result = await migrateCommunityToFirestore(exportState.community.id);
        if (result.success) {
-        setExportState(prevState => ({ ...prevState, status: 'success' }));
+        setExportState(prevState => ({ ...prevState, status: 'success', progress: {...prevState.progress, step: "Complete", detail: result.message, value: 100 }}));
         setExportedStatusMap(prev => ({...prev, [exportState.community!.id]: true}));
       } else {
         throw new Error(result.message);
@@ -158,7 +153,7 @@ export function CommunityList({
             <div className="space-y-1 p-2">
             {filteredCommunities.length > 0 ? (
                 filteredCommunities.map((community) => (
-                <div key={community.id} className="group relative flex items-center rounded-md pr-2 hover:bg-muted"
+                <div key={community.id} className="group relative flex items-center rounded-md"
                   onClick={() => onSelectCommunity(community.id)}>
                     <div
                         className={`w-full justify-start flex-grow h-auto py-2 px-2 flex items-center cursor-pointer rounded-md ${selectedCommunityId === community.id ? 'bg-secondary' : ''}`}
@@ -231,7 +226,7 @@ export function CommunityList({
                 
                 {(exportState.status === 'exporting' || exportState.status === 'success') && (
                     <div className="py-4 space-y-4">
-                        <Progress value={exportState.progress.value} className="w-full" />
+                        <Progress value={exportState.status === 'exporting' ? undefined : exportState.progress.value} className="w-full" />
                         <div className="text-center text-sm text-muted-foreground">
                             <p className="font-semibold">{exportState.progress.step}</p>
                             <p>{exportState.progress.detail}</p>
@@ -251,9 +246,15 @@ export function CommunityList({
                         <>
                             <Button variant="outline" onClick={closeDialog}>Cancel</Button>
                             <Button onClick={handleExport}>
-                                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Confirm & Migrate"}
+                                Confirm & Migrate
                             </Button>
                         </>
+                    )}
+                     {exportState.status === 'exporting' && (
+                        <Button disabled>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Migrating...
+                        </Button>
                     )}
                     {(exportState.status === 'success' || exportState.status === 'error') && (
                          <Button onClick={closeDialog}>Close</Button>

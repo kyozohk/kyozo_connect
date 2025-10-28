@@ -192,21 +192,17 @@ export async function isCommunityExported(communityId: string): Promise<boolean>
   }
 }
 
-export async function migrateCommunityToFirestore(communityId: string, onProgress: (progress: { step: string; detail: string; value: number }) => Promise<void>) {
+export async function migrateCommunityToFirestore(communityId: string) {
   const adminAuth = await getAdminAuth();
   const adminDb = await getAdminDb();
   try {
     const db = await getDb();
 
     // 1. Get all users from MongoDB
-    await onProgress({ step: 'User Migration', detail: 'Fetching users from source DB...', value: 5 });
     const allMongoUsers = await db.collection('users').find({}).toArray();
     const mongoUserMap = new Map(allMongoUsers.map(u => [u._id.toString(), u]));
-    await onProgress({ step: 'User Migration', detail: `Found ${allMongoUsers.length} total users to process.`, value: 10 });
-
 
     // 2. Register users in Firebase Auth and create mapping
-    let processedUserCount = 0;
     const userMigrationPromises = allMongoUsers.map(async (user) => {
       if (!user.email) return null;
       try {
@@ -226,8 +222,6 @@ export async function migrateCommunityToFirestore(communityId: string, onProgres
             throw e;
           }
         }
-        processedUserCount++;
-        await onProgress({ step: 'User Migration', detail: `Processing user ${processedUserCount}/${allMongoUsers.length}: ${user.email}`, value: 10 + (processedUserCount / allMongoUsers.length) * 20 });
         return { mongoId: user._id.toString(), firebaseUid: firebaseUser.uid };
       } catch (e) {
         console.error(`Failed to migrate user ${user.email}:`, e);
@@ -237,11 +231,8 @@ export async function migrateCommunityToFirestore(communityId: string, onProgres
 
     const migratedUsers = (await Promise.all(userMigrationPromises)).filter(u => u !== null);
     const uidMap = new Map(migratedUsers.map(u => [u!.mongoId, u!.firebaseUid]));
-    await onProgress({ step: 'User Migration', detail: 'User processing complete.', value: 30 });
-
 
     // 3. Migrate Community
-    await onProgress({ step: 'Community Migration', detail: 'Fetching community details...', value: 35 });
     const mongoCommunity = await db.collection('communities').findOne({ _id: new ObjectId(communityId) });
     if (!mongoCommunity) throw new Error('Community not found in MongoDB');
 
@@ -252,11 +243,8 @@ export async function migrateCommunityToFirestore(communityId: string, onProgres
       communityProfileImage: mongoCommunity.communityProfileImage,
       createdAt: mongoCommunity.createdAt,
     });
-    await onProgress({ step: 'Community Migration', detail: 'Community details migrated.', value: 40 });
-
 
     // 4. Migrate Memberships
-    await onProgress({ step: 'Membership Migration', detail: 'Preparing to migrate memberships...', value: 45 });
     const batch = adminDb.batch();
 
     // Owner
@@ -304,17 +292,12 @@ export async function migrateCommunityToFirestore(communityId: string, onProgres
             });
         }
     }
-    await onProgress({ step: 'Membership Migration', detail: 'All membership roles calculated.', value: 60 });
-
+    
     // 5. Migrate Messages
-    await onProgress({ step: 'Message Migration', detail: 'Fetching messages...', value: 65 });
     const mongoChannels = await db.collection('channels').find({ community: new ObjectId(communityId) }).toArray();
     const mongoChannelIds = mongoChannels.map(c => c._id);
     const mongoMessages = await db.collection('messages').find({ channel: { $in: mongoChannelIds } }).toArray();
-    await onProgress({ step: 'Message Migration', detail: `Found ${mongoMessages.length} messages to migrate.`, value: 70 });
 
-
-    let processedMessageCount = 0;
     for (const message of mongoMessages) {
         const senderMongoId = message.user?.toString();
         const senderFirebaseUid = uidMap.get(senderMongoId);
@@ -326,20 +309,14 @@ export async function migrateCommunityToFirestore(communityId: string, onProgres
                 userId: senderFirebaseUid,
             });
         }
-        processedMessageCount++;
-        await onProgress({ step: 'Message Migration', detail: `Processing message ${processedMessageCount}/${mongoMessages.length}`, value: 70 + (processedMessageCount / mongoMessages.length) * 25 });
     }
     
-    await onProgress({ step: 'Finalizing', detail: 'Committing changes to Firestore...', value: 98 });
     await batch.commit();
-    await onProgress({ step: 'Complete', detail: 'Migration successful!', value: 100 });
-
 
     return { success: true, message: `Community '${mongoCommunity.name}' migrated successfully.` };
 
   } catch (error: any) {
     console.error('Migration failed:', error);
-    await onProgress({ step: 'Error', detail: error.message || 'An unknown error occurred.', value: 0 });
     return { success: false, message: error.message || 'An unknown error occurred during migration.' };
   }
 }
