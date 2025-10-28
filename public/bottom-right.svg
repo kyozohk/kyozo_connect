@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200px" height="200px" viewBox="0 0 200 200" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Bottom Right Decoration</title>
+    <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M200,0 C200,110.457 110.457,200 0,200 L0,150 C82.843,150 150,82.843 150,0 L200,0 Z" fill="#9D6469" opacity="0.3"></path>
+        <path d="M200,50 C200,132.843 132.843,200 50,200 L50,150 C105.228,150 150,105.228 150,50 L200,50 Z" fill="#81C9BD" opacity="0.3"></path>
+        <path d="M200,100 C200,155.228 155.228,200 100,200 L100,150 C127.614,150 150,127.614 150,100 L200,100 Z" fill="#C098E5" opacity="0.3"></path>
+    </g>
+</svg>
