@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { Community, Member } from '@/types';
 import { UserNav } from './user-nav';
 import { CommunityList } from './community-list';
@@ -18,29 +18,44 @@ export type DataSource = 'mongodb' | 'firestore';
 
 export function DashboardClient({
   communities,
-  initialCommunityId,
-  initialMemberId,
+  searchParams,
   dataSource,
 }: {
   communities: Community[];
-  initialCommunityId?: string;
-  initialMemberId?: string;
+  searchParams?: { [key: string]: string | string[] | undefined };
   dataSource: DataSource;
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const currentSearchParams = useSearchParams();
+  const updateTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const getInitialCommunityId = () => {
-    if (typeof initialCommunityId === 'string' && communities.some(c => c.id === initialCommunityId)) {
-      return initialCommunityId;
+    const communityIdFromParams = searchParams?.communityId;
+    if (typeof communityIdFromParams === 'string' && communities.some(c => c.id === communityIdFromParams)) {
+      return communityIdFromParams;
     }
     return '';
   };
+  
+  const getInitialMemberId = () => {
+    const memberIdFromParams = searchParams?.memberId;
+    return typeof memberIdFromParams === 'string' ? memberIdFromParams : undefined;
+  };
+
 
   const [selectedCommunityId, setSelectedCommunityId] = useState(getInitialCommunityId());
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const appVersion = packageJson.version;
+
+
+  const debouncedUpdateUrl = useCallback((newSearchParams: URLSearchParams) => {
+    if (updateTimeout.current) {
+        clearTimeout(updateTimeout.current);
+    }
+    updateTimeout.current = setTimeout(() => {
+        router.replace(`${pathname}?${newSearchParams.toString()}`, { scroll: false });
+    }, 300);
+  }, [pathname, router]);
 
   const handleSelectCommunity = (communityId: string | null) => {
     const newId = communityId === selectedCommunityId ? null : communityId;
@@ -50,26 +65,28 @@ export function DashboardClient({
     if (newId) {
       newSearchParams.set('communityId', newId);
     }
-    router.push(`${pathname}?${newSearchParams.toString()}`);
+    debouncedUpdateUrl(newSearchParams);
   };
 
   const handleSelectMember = useCallback((member: Member | null) => {
     setSelectedMember(member);
-    const newSearchParams = new URLSearchParams(currentSearchParams.toString());
-    if (selectedCommunityId) {
+    const newSearchParams = new URLSearchParams();
+     if (selectedCommunityId) {
       newSearchParams.set('communityId', selectedCommunityId);
-    } else {
-       newSearchParams.delete('communityId');
     }
-
     if(member?.id) {
         newSearchParams.set('memberId', member.id);
-    } else {
-        newSearchParams.delete('memberId');
     }
-    
-    router.replace(`${pathname}?${newSearchParams.toString()}`);
-  }, [router, currentSearchParams, selectedCommunityId, pathname]);
+    debouncedUpdateUrl(newSearchParams);
+  }, [selectedCommunityId, debouncedUpdateUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (updateTimeout.current) {
+        clearTimeout(updateTimeout.current);
+      }
+    };
+  }, []);
 
   const selectedCommunity = communities.find(c => c.id === selectedCommunityId);
 
@@ -120,7 +137,7 @@ export function DashboardClient({
               key={`${dataSource}-${selectedCommunityId}`}
               communityId={selectedCommunityId}
               onSelectMember={handleSelectMember}
-              initialSelectedMemberId={initialMemberId}
+              initialSelectedMemberId={getInitialMemberId()}
               dataSource={dataSource}
               />
           </ResizablePanel>
