@@ -12,6 +12,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/componen
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import packageJson from '../../../package.json';
 
 export type DataSource = 'mongodb' | 'firestore';
 
@@ -31,6 +32,7 @@ export function DashboardClient({
   const searchParams = useSearchParams();
   const [selectedCommunityId, setSelectedCommunityId] = useState(initialSelectedCommunityId);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const appVersion = packageJson.version;
 
   const handleSelectCommunity = (communityId: string | null) => {
     const newId = communityId === selectedCommunityId ? null : communityId;
@@ -70,7 +72,9 @@ export function DashboardClient({
       <header className="flex h-16 items-center justify-between border-b px-4 lg:px-6">
          <div className="flex items-center gap-4">
             <h1 className="text-xl font-bold tracking-tight text-primary">
-            KyozoConnect <span className="text-sm font-normal text-muted-foreground">{isFire ? '🔥' : '🧊'}</span>
+              KyozoConnect 
+              <span className="ml-2 text-xs font-mono text-muted-foreground align-middle">v{appVersion}</span>
+              <span className="text-sm font-normal text-muted-foreground">{isFire ? '🔥' : '🧊'}</span>
             </h1>
          </div>
         <div className="flex items-center gap-4">
