@@ -10,13 +10,18 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ClipboardCopy } from 'lucide-react';
+import { ClipboardCopy, Shield, Crown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, parseISO } from 'date-fns';
-import { Badge } from '@/components/ui/badge';
 import { Users } from 'lucide-react';
 import { DataSource } from './dashboard-client';
+
+const roleIcons = {
+  owner: Crown,
+  admin: Shield,
+  member: null,
+};
+
 
 export function MemberList({ 
     communityId, 
@@ -123,7 +128,9 @@ export function MemberList({
               </div>
             ))
           ) : filteredMembers.length > 0 ? (
-            filteredMembers.map((member) => (
+            filteredMembers.map((member) => {
+              const RoleIcon = roleIcons[member.role];
+              return (
                 <div key={member.id} className="group flex items-center justify-between rounded-md pr-2 hover:bg-muted"
                      onClick={() => handleSelectMember(member)}>
                     <div className={cn(
@@ -137,23 +144,9 @@ export function MemberList({
                         <div className="flex-1 overflow-hidden">
                           <div className="flex items-center space-x-2">
                             <p className="text-sm font-medium leading-none truncate">{member.displayName}</p>
-                            {member.role !== 'member' && (
-                                <Badge variant={member.role === 'owner' ? 'default' : 'secondary'} className="capitalize text-xs h-5">
-                                    {member.role}
-                                </Badge>
-                            )}
-                             {member.passwordInitialized === false && (
-                                <Badge variant="outline" className="text-xs h-5">
-                                    Invited
-                                </Badge>
-                            )}
+                            {RoleIcon && <RoleIcon className={cn("h-4 w-4", member.role === 'owner' ? 'text-amber-500' : 'text-muted-foreground')} />}
                           </div>
                           <p className="text-xs text-muted-foreground truncate">{member.phoneNumber || member.email}</p>
-                          {member.joinedAt && (
-                             <p className="text-xs text-muted-foreground truncate">
-                                Joined: {format(parseISO(member.joinedAt), "MMM d, yyyy")}
-                             </p>
-                          )}
                         </div>
                     </div>
                     <Button
@@ -165,7 +158,8 @@ export function MemberList({
                         <ClipboardCopy className="h-4 w-4" />
                     </Button>
                 </div>
-            ))
+              )
+            })
           ) : (
             <p className="p-4 text-sm text-muted-foreground">No members in this community.</p>
           )}
