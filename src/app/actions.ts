@@ -197,6 +197,8 @@ export async function migrateCommunityToFirestore(communityId: string) {
   console.log(`[MIGRATION_START] Starting migration for communityId: ${communityId}`);
   const adminAuth = await getAdminAuth();
   const adminDb = await getAdminDb();
+  let exportedData = {};
+
   try {
     const db = await getDb();
     
@@ -208,7 +210,9 @@ export async function migrateCommunityToFirestore(communityId: string) {
     console.log(`[MIGRATION_LOG] Found community "${rawMongoCommunity.name}" in MongoDB.`);
 
     // ** BUG FIX: Get member ObjectIDs BEFORE sanitizing the community object **
-    const memberMongoOids = (rawMongoCommunity.usersList || []).map((u: any) => u.userId).filter(Boolean);
+    const memberMongoOids = (rawMongoCommunity.usersList && Array.isArray(rawMongoCommunity.usersList))
+      ? rawMongoCommunity.usersList.map((u: any) => u.userId).filter(Boolean)
+      : [];
     console.log(`[MIGRATION_LOG] Found 'usersList' with ${memberMongoOids.length} member ObjectIDs.`);
     
     const usersToMigrate = memberMongoOids.length > 0 
@@ -278,10 +282,13 @@ export async function migrateCommunityToFirestore(communityId: string) {
         ...restOfCommunityData 
     } = mongoCommunity;
 
-    await firestoreCommunityRef.set({
-      ...restOfCommunityData,
-      migratedAt: FieldValue.serverTimestamp(),
-    });
+    const finalCommunityData = {
+        ...restOfCommunityData,
+        migratedAt: FieldValue.serverTimestamp(),
+    };
+    exportedData = { community: finalCommunityData, memberships: [], messages: [] };
+
+    await firestoreCommunityRef.set(finalCommunityData);
     console.log(`[MIGRATION_LOG] Community document "${mongoCommunity.name}" written to Firestore.`);
 
     // 5. Migrate Memberships
@@ -316,6 +323,8 @@ export async function migrateCommunityToFirestore(communityId: string) {
           membershipData.passwordInitialized = false;
         }
 
+        // @ts-ignore
+        exportedData.memberships.push(membershipData);
         const membershipRef = adminDb.collection('memberships').doc();
         batch.set(membershipRef, membershipData);
       }
@@ -334,12 +343,15 @@ export async function migrateCommunityToFirestore(communityId: string) {
         const senderMongoId = message.user?.toString();
         const migratedUser = uidMap.get(senderMongoId);
         if (migratedUser) {
-            const messageRef = firestoreCommunityRef.collection('messages').doc();
-            batch.set(messageRef, {
+            const messageData = {
                 text: message.text,
                 createdAt: message.createdAt,
                 userId: migratedUser.firebaseUid,
-            });
+            };
+            // @ts-ignore
+            exportedData.messages.push(messageData);
+            const messageRef = firestoreCommunityRef.collection('messages').doc();
+            batch.set(messageRef, messageData);
         } else {
              console.warn(`[MIGRATION_WARN] Skipping message ID ${message._id} because sender ${senderMongoId} was not migrated.`);
         }
@@ -351,10 +363,18 @@ export async function migrateCommunityToFirestore(communityId: string) {
     const summaryMessage = `Migrated 1 community, ${memberMongoIds.length} members, and ${mongoMessages.length} messages.`;
     console.log(`[MIGRATION_SUCCESS] Batch commit successful. ${summaryMessage}`);
 
-    return { success: true, message: summaryMessage };
+    return { 
+        success: true, 
+        message: summaryMessage,
+        exportedData: JSON.stringify(exportedData, null, 2),
+    };
 
   } catch (error: any) {
     console.error('[MIGRATION_FAILED] An error occurred during migration:', error);
-    return { success: false, message: error.message || 'An unknown error occurred during migration.' };
+    return { 
+        success: false, 
+        message: error.message || 'An unknown error occurred during migration.',
+        exportedData: JSON.stringify(exportedData, null, 2),
+    };
   }
 }

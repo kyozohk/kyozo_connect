@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Community } from '@/types';
@@ -22,6 +23,7 @@ import {
 import { isCommunityExported, migrateCommunityToFirestore } from '@/app/actions';
 import { deleteCommunityFromFirestore } from '@/app/fire/actions';
 import { useRouter } from 'next/navigation';
+import { Textarea } from '../ui/textarea';
 
 interface CommunityListProps {
   communities: Community[];
@@ -36,6 +38,7 @@ interface DialogState {
   status: DialogStatus;
   community: Community | null;
   message: string | null;
+  exportedData: string | null;
   destination: 'Development' | 'Production';
 }
 
@@ -43,6 +46,7 @@ const INITIAL_DIALOG_STATE: DialogState = {
   status: 'idle',
   community: null,
   message: null,
+  exportedData: null,
   destination: process.env.NODE_ENV === 'production' ? 'Production' : 'Development',
 };
 
@@ -115,18 +119,18 @@ export function CommunityList({
   const handleExport = async () => {
     if (!dialogState.community) return;
 
-    setDialogState(prevState => ({ ...prevState, status: 'exporting', message: null }));
+    setDialogState(prevState => ({ ...prevState, status: 'exporting', message: null, exportedData: null }));
     
     try {
       const result = await migrateCommunityToFirestore(dialogState.community.id);
        if (result.success) {
-        setDialogState(prevState => ({ ...prevState, status: 'export-success', message: result.message }));
+        setDialogState(prevState => ({ ...prevState, status: 'export-success', message: result.message, exportedData: result.exportedData }));
         setExportedStatusMap(prev => ({...prev, [dialogState.community!.id]: true}));
       } else {
         throw new Error(result.message);
       }
     } catch (error: any) {
-       setDialogState(prevState => ({ ...prevState, status: 'export-error', message: error.message || 'An unexpected error occurred.' }));
+       setDialogState(prevState => ({ ...prevState, status: 'export-error', message: error.message || 'An unexpected error occurred.', exportedData: error.exportedData }));
     }
   };
 
@@ -144,7 +148,7 @@ export function CommunityList({
         throw new Error(result.message);
       }
     } catch (error: any) {
-      setDialogState(prevState => ({...prevState, status: 'delete-error', message: error.message || 'An unexpected error occurred.' }));
+      setDialogState(prevState => ({...prevState, status: 'delete-error', message: error.message || 'An unknown error occurred.' }));
     }
   }
   
@@ -167,7 +171,7 @@ export function CommunityList({
   const isProcessing = dialogState.status === 'exporting' || dialogState.status === 'deleting';
 
   const renderDialogContent = () => {
-    const { status, community, destination, message } = dialogState;
+    const { status, community, destination, message, exportedData } = dialogState;
 
     switch(status) {
         case 'confirming-export':
@@ -207,35 +211,38 @@ export function CommunityList({
                         </div>
                     </div>
                 )}
-                 {status === 'export-success' && message && (
+                 {(status === 'export-success' || status === 'export-error') && (
                     <div className="py-4 space-y-4">
-                        <div className="relative">
-                            <Input
-                                readOnly
-                                value={message}
-                                className="pr-10"
-                            />
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="absolute top-1/2 right-1 -translate-y-1/2 h-8 w-8"
-                                onClick={() => handleCopy(message, "Migration summary copied.")}
-                            >
-                                <ClipboardCopy className="h-4 w-4"/>
-                            </Button>
-                        </div>
-                    </div>
-                )}
-                {status === 'export-error' && (
-                    <div className="py-4 text-destructive text-sm bg-destructive/10 p-3 rounded-md">
-                        <p className="font-semibold">Error Details:</p>
-                        <p>{message}</p>
+                        {message && <div className="text-sm text-muted-foreground">{message}</div>}
+                        {exportedData && (
+                            <div className="relative">
+                                <Textarea
+                                    readOnly
+                                    value={exportedData}
+                                    className="h-48 text-xs font-mono bg-secondary border-secondary"
+                                />
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="absolute top-2 right-2 h-7 w-7"
+                                    onClick={() => handleCopy(exportedData, "Exported JSON data copied.")}
+                                >
+                                    <ClipboardCopy className="h-4 w-4"/>
+                                </Button>
+                            </div>
+                        )}
+                        {status === 'export-error' && message && (
+                             <div className="py-4 text-destructive text-sm bg-destructive/10 p-3 rounded-md">
+                                <p className="font-semibold">Error Details:</p>
+                                <p>{message}</p>
+                            </div>
+                        )}
                     </div>
                 )}
                 <DialogFooter>
                     {status === 'confirming-export' && ( <> <Button variant="outline" onClick={closeDialog}>Cancel</Button> <Button onClick={handleExport}>Confirm & Migrate</Button> </> )}
                     {status === 'exporting' && ( <Button disabled> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Migrating... </Button> )}
-                    {status === 'export-success' && ( <> <Button variant="outline" onClick={closeDialog}>Close</Button> <Button onClick={() => router.push('/fire')}>Go to Destination <ArrowRight className="ml-2 h-4 w-4" /></Button> </> )}
+                    {status === 'export-success' && ( <div className='flex w-full justify-between'><Button variant="outline" onClick={closeDialog}>Close</Button> <Button onClick={() => router.push('/fire')}>Go to Destination <ArrowRight className="ml-2 h-4 w-4" /></Button></div> )}
                     {status === 'export-error' && ( <Button onClick={closeDialog}>Close</Button> )}
                 </DialogFooter>
                 </>
@@ -366,7 +373,7 @@ export function CommunityList({
             </div>
         </ScrollArea>
         <Dialog open={isDialogActive} onOpenChange={(open) => !open && closeDialog()}>
-            <DialogContent onPointerDownOutside={(e) => isProcessing && e.preventDefault()} onInteractOutside={(e) => isProcessing && e.preventDefault()}>
+            <DialogContent onPointerDownOutside={(e) => isProcessing && e.preventDefault()} onInteractOutside={(e) => isProcessing && e.preventDefault()} className="max-w-md">
                 {renderDialogContent()}
             </DialogContent>
         </Dialog>
