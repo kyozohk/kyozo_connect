@@ -83,7 +83,7 @@ body {
     --secondary-foreground: 0 0% 98%;
     --muted: 259 15% 20%;
     --muted-foreground: 270 10% 60%;
-    --accent: 333 100% 71%;
+    --accent: #ff6ea9;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
@@ -698,6 +698,60 @@ body {
       opacity: 0;
     }
   }
+
+  /* ScrollRevealText Styles */
+  .scrollRevealContainer {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+    width: 100%;
+    overflow: hidden;
+    z-index: 5;
+    padding: 2rem;
+  }
+
+  .scrollRevealText {
+    text-align: center;
+    line-height: 1.1;
+    color: var(--text-color);
+    margin: 0;
+    padding: 0;
+  }
+
+  @media (max-width: 768px) {
+    .scrollRevealText {
+      font-size: 4rem !important;
+    }
+  }
+
+  .scrollRevealText .word {
+    display: inline-block;
+    margin-right: 0.5rem;
+  }
+
+  .scrollRevealText .word:last-child {
+    margin-right: 0;
+  }
+
+  .scrollRevealText .letter {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+
+  .scrollRevealText .letter.revealed {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .scrollRevealText .wordSpace {
+    display: inline-block;
+    width: 0.5rem;
+  }
+
 }
 
     

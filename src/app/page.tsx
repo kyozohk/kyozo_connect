@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import FeatureCard from '@/components/landing/FeatureCard';
+import ScrollRevealText from '@/components/landing/ScrollRevealText';
 
 export default function Home() {
   const { user, loading } = useUser();
@@ -34,6 +35,9 @@ export default function Home() {
     <main>
       <Hero />
       <FeatureCard />
+      <div className="my-80 bg-white" style={{ paddingLeft: '10%', paddingRight: '10%' }}>
+        <ScrollRevealText text="Where creative minds converge" />      
+      </div>
       <FixedFooter />
     </main>
   );
