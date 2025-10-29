@@ -26,7 +26,7 @@ export function CommunityHeader({ community }: CommunityHeaderProps) {
 
     return (
         <div className="relative">
-            <div className="relative h-48 w-full">
+            <div className="relative h-48 w-full rounded-t-lg overflow-hidden">
                 {data.communityBackgroundImage ? (
                     <Image
                         src={data.communityBackgroundImage}
@@ -35,16 +35,16 @@ export function CommunityHeader({ community }: CommunityHeaderProps) {
                         className="object-cover"
                     />
                 ) : (
-                    <div className="h-full w-full bg-gradient-to-r from-blue-500 to-indigo-600" />
+                    <div className="h-full w-full bg-gradient-to-r from-pink-500/20 to-blue-500/20" />
                 )}
-                <div className="absolute inset-0 bg-black/30" />
+                <div className="absolute inset-0 bg-black/50" />
             </div>
 
             <div className="relative px-8 -mt-16">
                 <div className="flex items-end gap-6">
-                    <Avatar className="h-32 w-32 border-4 border-background">
-                        <AvatarImage src={community.communityProfileImage} alt={community.name} />
-                        <AvatarFallback><LayoutGrid className="h-16 w-16" /></AvatarFallback>
+                    <Avatar className="h-32 w-32 border-4 border-background rounded-lg">
+                        <AvatarImage src={community.communityProfileImage} alt={community.name} className="rounded-lg" />
+                        <AvatarFallback className="rounded-lg"><LayoutGrid className="h-16 w-16" /></AvatarFallback>
                     </Avatar>
                     <div className="flex-grow pb-2">
                         <h1 className="text-4xl font-bold text-white shadow-md">{community.name}</h1>
@@ -54,7 +54,7 @@ export function CommunityHeader({ community }: CommunityHeaderProps) {
 
                 <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
                      {data.communityPrivacy && (
-                        <Badge variant="outline" className="border-gray-400 text-gray-300">
+                        <Badge variant="outline" className="border-gray-400 text-gray-300 rounded-md">
                            <Globe className="h-3 w-3 mr-1.5"/> 
                            {data.communityPrivacy === 'open' ? 'Public' : 'Private'} Community
                         </Badge>
@@ -73,7 +73,7 @@ export function CommunityHeader({ community }: CommunityHeaderProps) {
 
                  <div className="mt-2 flex flex-wrap items-center gap-2">
                     {visibleTags.map((tag: string, index: number) => (
-                        <Badge key={index} variant="secondary">{tag}</Badge>
+                        <Badge key={index} variant="secondary" className="rounded-md">{tag}</Badge>
                     ))}
                     {hiddenTags.length > 0 && (
                         <DropdownMenu>
@@ -104,7 +104,7 @@ export function CommunityHeader({ community }: CommunityHeaderProps) {
                             <p className="text-sm font-medium text-muted-foreground">Color Palette:</p>
                             <div className="flex gap-2">
                             {(data.colorPalette as any[]).map((color, index) => (
-                                <div key={index} className="h-6 w-6 rounded-full border" style={{ backgroundColor: color.hexCode }} title={color.hexCode} />
+                                <div key={index} className="h-6 w-6 rounded-md border" style={{ backgroundColor: color.hexCode }} title={color.hexCode} />
                             ))}
                             </div>
                         </div>

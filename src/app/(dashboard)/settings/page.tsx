@@ -8,7 +8,7 @@ export default function SettingsPage() {
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
       </div>
-      <Card>
+      <Card className="bg-card/50 border-border/50">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Settings className="h-6 w-6" />

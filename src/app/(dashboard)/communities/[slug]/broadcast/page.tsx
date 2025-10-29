@@ -23,7 +23,7 @@ export default async function BroadcastPage({ params }: { params: { slug: string
   return (
      <div className="p-8">
       <h2 className="text-3xl font-bold tracking-tight mb-4">Broadcast</h2>
-       <Card>
+       <Card className="bg-card/50 border-border/50">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Send className="h-6 w-6" />

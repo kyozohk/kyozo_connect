@@ -32,7 +32,7 @@ export default async function CommunityOverviewPage({ params }: { params: { slug
       <div className="p-8">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => (
-            <Card key={stat.title}>
+            <Card key={stat.title} className="bg-card/50 border-border/50">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
                 <stat.icon className="h-4 w-4 text-muted-foreground" />
