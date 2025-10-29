@@ -3,8 +3,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getFirestoreCommunities, getFirestoreMembers } from '@/app/fire/actions';
-import { deleteCommunity } from '@/firebase/actions';
+import { getFirestoreCommunities, getFirestoreMembers, deleteCommunityFromFirestore } from '@/app/fire/actions';
 import { useFirestore } from '@/firebase';
 import { CommunityHeader } from '@/components/communities/community-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -66,17 +65,17 @@ export default function CommunityOverviewPage({ params }: { params: { slug: stri
   };
 
   const handleDelete = async () => {
-    if (!community || !firestore) return;
+    if (!community) return;
 
     setDialogState(prevState => ({ ...prevState, status: 'deleting' }));
     
-    // This client-side function will now emit a detailed error if it fails
-    deleteCommunity(firestore, community.id);
+    const result = await deleteCommunityFromFirestore(community.id);
 
-    // Optimistically assume success for UI, the error listener will catch failures
-    setTimeout(() => {
-        setDialogState({ status: 'delete-success', message: `Deletion process for "${community.name}" initiated.` });
-    }, 1500);
+    if (result.success) {
+        setDialogState({ status: 'delete-success', message: result.message });
+    } else {
+        setDialogState({ status: 'delete-error', message: result.message });
+    }
   };
 
   const closeDialog = () => {
@@ -84,6 +83,7 @@ export default function CommunityOverviewPage({ params }: { params: { slug: stri
     setDialogState(INITIAL_DIALOG_STATE);
     if (status === 'delete-success') {
       router.push('/communities');
+      router.refresh();
     }
   };
 
@@ -145,7 +145,7 @@ export default function CommunityOverviewPage({ params }: { params: { slug: stri
             return (
                  <div className="py-8 flex flex-col items-center justify-center gap-4">
                      <CheckCircle2 className="h-12 w-12 text-green-500" />
-                     <h3 className="text-lg font-medium">Deletion Initiated</h3>
+                     <h3 className="text-lg font-medium">Deletion Successful</h3>
                      <p className="text-muted-foreground text-center">{message}</p>
                      <Button onClick={closeDialog}>Close</Button>
                  </div>

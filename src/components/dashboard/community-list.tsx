@@ -20,7 +20,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { isCommunityExported, migrateCommunityToFirestore, getCommunityExportData, type CommunityExportDataResult } from '@/app/actions';
-import { deleteCommunityFromFirestore } from '@/app/fire/actions';
 import { useRouter } from 'next/navigation';
 import { Textarea } from '../ui/textarea';
 import { cn } from '@/lib/utils';
@@ -32,7 +31,7 @@ interface CommunityListProps {
   showExport: boolean;
 }
 
-type DialogStatus = 'idle' | 'confirming-export' | 'exporting' | 'export-success' | 'export-error' | 'confirming-delete' | 'deleting' | 'delete-success' | 'delete-error';
+type DialogStatus = 'idle' | 'confirming-export' | 'exporting' | 'export-success' | 'export-error';
 
 type LoadingStep = 'community' | 'members' | 'messages';
 
@@ -178,15 +177,6 @@ export function CommunityList({
     processExportDataStream(community.id);
   }
 
-
-  const confirmDelete = (community: Community) => {
-    setDialogState({
-        ...INITIAL_DIALOG_STATE,
-        status: 'confirming-delete',
-        community: community,
-    });
-  }
-
   const handleExport = async () => {
     if (!dialogState.community) return;
 
@@ -204,32 +194,10 @@ export function CommunityList({
        setDialogState(prevState => ({ ...prevState, status: 'export-error', message: error.message || 'An unexpected error occurred.', exportedData: error.exportedData }));
     }
   };
-
-  const handleDelete = async () => {
-    if (!dialogState.community) return;
-
-    setDialogState(prevState => ({ ...prevState, status: 'deleting', message: null }));
-
-    try {
-      const result = await deleteCommunityFromFirestore(dialogState.community.id);
-      if (result.success) {
-        setDialogState(prevState => ({ ...prevState, status: 'delete-success', message: result.message }));
-        onSelectCommunity(null); // Deselect the community
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (error: any) {
-      setDialogState(prevState => ({ ...prevState, status: 'delete-error', message: error.message || 'An unknown error occurred.' }));
-    }
-  }
   
   const closeDialog = () => {
     const status = dialogState.status;
-    if (status !== 'exporting' && status !== 'deleting') {
-        if(status === 'delete-success') {
-          // force a reload by navigating
-          window.location.reload();
-        }
+    if (status !== 'exporting') {
         setDialogState(INITIAL_DIALOG_STATE);
     }
   }
@@ -239,7 +207,7 @@ export function CommunityList({
   );
   
   const isDialogActive = dialogState.status !== 'idle';
-  const isProcessing = dialogState.status === 'exporting' || dialogState.status === 'deleting';
+  const isProcessing = dialogState.status === 'exporting';
 
   const renderDialogContent = () => {
     const { status, community, destination, message, exportedData, loadingSteps } = dialogState;
@@ -330,54 +298,6 @@ export function CommunityList({
                 </DialogFooter>
                 </>
             );
-        case 'confirming-delete':
-        case 'deleting':
-        case 'delete-success':
-        case 'delete-error':
-            return (
-                 <>
-                <DialogHeader>
-                    <DialogTitle>
-                        {status === 'confirming-delete' && 'Confirm Deletion'}
-                        {status === 'deleting' && 'Deleting Community'}
-                        {status === 'delete-success' && 'Deletion Complete'}
-                        {status === 'delete-error' && 'Deletion Failed'}
-                    </DialogTitle>
-                     <DialogDescription>
-                         {status === 'confirming-delete' && `This will permanently delete "${community?.name}" and all its data from Firestore.`}
-                         {(status === 'deleting' || status === 'delete-success') && `Deleting "${community?.name}" from Firestore.`}
-                         {status === 'delete-error' && `Something went wrong while deleting "${community?.name}".`}
-                    </DialogDescription>
-                </DialogHeader>
-                 {status === 'confirming-delete' && (
-                    <div className="py-4 text-sm text-destructive">
-                        <p>This action is irreversible and will delete:</p>
-                        <ul className="list-disc pl-5 mt-2 space-y-1">
-                            <li>The main community document.</li>
-                            <li>All messages in the community channel.</li>
-                            <li>All membership records for this community.</li>
-                        </ul>
-                    </div>
-                )}
-                {(status === 'deleting' || status === 'delete-success') && (
-                     <div className="py-4 space-y-4 flex items-center justify-center h-24">
-                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                         <p className="ml-4 text-muted-foreground">{status === 'deleting' ? 'Deleting, please wait...' : message}</p>
-                     </div>
-                )}
-                {status === 'delete-error' && (
-                    <div className="py-4 text-destructive text-sm bg-destructive/10 p-3 rounded-md">
-                        <p className="font-semibold">Error Details:</p>
-                        <p>{message}</p>
-                    </div>
-                )}
-                 <DialogFooter>
-                    {status === 'confirming-delete' && ( <> <Button variant="outline" onClick={closeDialog}>Cancel</Button> <Button variant="destructive" onClick={handleDelete}>Confirm & Delete</Button> </> )}
-                    {status === 'deleting' && ( <Button variant="destructive" disabled> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting... </Button> )}
-                    {(status === 'delete-success' || status === 'delete-error') && ( <Button onClick={closeDialog}>Close</Button> )}
-                </DialogFooter>
-                </>
-            );
         default:
             return null;
     }
@@ -422,7 +342,7 @@ export function CommunityList({
                             >
                                 <ClipboardCopy className="h-5 w-5" />
                             </Button>
-                            {showExport ? (
+                            {showExport && (
                              <Button
                                 variant="ghost"
                                 size="icon"
@@ -431,16 +351,6 @@ export function CommunityList({
                                 onClick={(e) => { e.stopPropagation(); confirmExport(community); }}
                             >
                                 <UploadCloud className="h-6 w-6 text-primary" />
-                            </Button>
-                            ) : (
-                             <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-10 w-10 flex-shrink-0"
-                                disabled={isProcessing}
-                                onClick={(e) => { e.stopPropagation(); confirmDelete(community); }}
-                            >
-                                <Trash2 className="h-6 w-6 text-destructive" />
                             </Button>
                             )}
                           </div>
