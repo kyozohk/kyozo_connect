@@ -6,6 +6,7 @@ import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
+import FeatureCard from '@/components/landing/FeatureCard';
 
 export default function Home() {
   const { user, loading } = useUser();
@@ -32,6 +33,7 @@ export default function Home() {
   return (
     <main>
       <Hero />
+      <FeatureCard />
       <FixedFooter />
     </main>
   );
