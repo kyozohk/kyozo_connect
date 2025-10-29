@@ -3,7 +3,7 @@ import './globals.css';
 import { Providers } from './providers';
 import { Toaster } from '@/components/ui/toaster';
 import { SidebarProvider } from '@/components/ui/sidebar';
-import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { FirebaseClientProvider, FirebaseErrorListener } from '@/firebase';
 
 export const metadata: Metadata = {
   title: 'KyozoConnect',
@@ -29,6 +29,7 @@ export default function RootLayout({
               {children}
             </SidebarProvider>
             <Toaster />
+            <FirebaseErrorListener />
           </Providers>
         </FirebaseClientProvider>
       </body>
