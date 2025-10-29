@@ -1,10 +1,12 @@
 
 
+import React from 'react';
 import { MemberListClient } from '@/components/members/member-list-client';
 import { getFirestoreMembers, getFirestoreCommunities } from '@/app/fire/actions';
 import { notFound } from 'next/navigation';
 
-export default async function MembersPage({ params }: { params: { slug: string } }) {
+export default async function MembersPage({ params: paramsPromise }: { params: Promise<{ slug: string }> }) {
+  const params = React.use(paramsPromise);
   const { slug } = params;
   
   const communities = await getFirestoreCommunities();

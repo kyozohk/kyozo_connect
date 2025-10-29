@@ -1,5 +1,6 @@
 
 
+import React from 'react';
 import { MemberListClient } from '@/components/members/member-list-client';
 import { getFirestoreMembers, getFirestoreCommunities } from '@/app/fire/actions';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -8,7 +9,8 @@ import { Send } from 'lucide-react';
 import { notFound } from 'next/navigation';
 
 
-export default async function BroadcastPage({ params }: { params: { slug: string } }) {
+export default async function BroadcastPage({ params: paramsPromise }: { params: Promise<{ slug: string }> }) {
+  const params = React.use(paramsPromise);
   const { slug } = params;
   
   const communities = await getFirestoreCommunities();
