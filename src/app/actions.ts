@@ -462,15 +462,19 @@ export async function migrateCommunityToFirestore(communityId: string) {
     // ** Step 7: Migrate Messages
     const mongoChannels = await db.collection('channels').find({ community: rawMongoCommunity._id }).toArray();
     const mongoChannelIds = mongoChannels.map(c => c._id);
+    const channelUserMap = new Map(mongoChannels.map(c => [c._id.toString(), c.user.toString()]));
+
     const mongoMessages = mongoChannelIds.length > 0
         ? await db.collection('messages').find({ channel: { $in: mongoChannelIds } }).toArray()
         : [];
 
     for (const message of mongoMessages) {
+        // Determine the sender. The sender could be in `message.user` (direct from message) or via the channel for system messages.
         const senderMongoId = (message.user || message.senderId)?.toString();
+
         if (!senderMongoId) {
-            console.warn(`[MIGRATION_WARN] Skipping message ID ${message._id} due to missing sender ID.`);
-            continue;
+             console.warn(`[MIGRATION_WARN] Skipping message ID ${message._id} due to missing sender ID.`);
+             continue;
         }
 
         const migratedUser = uidMap.get(senderMongoId);
