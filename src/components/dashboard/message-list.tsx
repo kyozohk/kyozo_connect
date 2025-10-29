@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { getMessagesForMember, summarizeMessages } from '@/app/actions';
-import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { getFirestoreMessagesForMember } from '@/app/fire/actions';
+import { useUser } from '@/firebase';
 import { Message, Member } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -20,7 +20,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import { formatDistanceToNow } from 'date-fns';
-import { DataSource } from './dashboard-client';
+import type { DataSource } from './dashboard-client';
 
 export function MessageList({ communityId, communityName, member, dataSource }: { communityId: string, communityName?: string, member: Member | null, dataSource: DataSource }) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -33,45 +33,28 @@ export function MessageList({ communityId, communityName, member, dataSource }: 
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
-  const firestore = useFirestore();
-  const messagesQuery = useMemo(() => {
-    if (!firestore || !communityId || dataSource !== 'firestore') return null;
-    return query(collection(firestore, 'communities', communityId, 'messages'), orderBy('createdAt', 'desc'));
-  }, [firestore, communityId, dataSource]);
-
-  const { data: firestoreMessages, loading: firestoreLoading } = useCollection<Message>(messagesQuery);
-
   useEffect(() => {
-    if (dataSource === 'firestore') {
-      if (firestoreMessages) {
-        // This is simplified. You might need to enrich this with sender data.
-        const messageData = firestoreMessages.map(doc => ({
-          id: doc.id,
-          text: doc.text,
-          createdAt: doc.createdAt?.toDate().toISOString(),
-          sender: { // This part needs real data
-              id: doc.userId,
-              uid: doc.userId,
-              displayName: 'Unknown',
-              photoURL: '',
-          },
-          data: doc,
-        }));
-        setMessages(messageData as Message[]);
-      }
-      setLoading(firestoreLoading);
-    } else {
+    async function fetchMessages() {
       if (!communityId || !member?.id) {
           setMessages([]);
           setLoading(false);
           return;
       }
       setLoading(true);
-      getMessagesForMember(communityId, member.id)
-        .then((msgs) => setMessages(msgs))
-        .finally(() => setLoading(false));
+      try {
+        const fetchedMessages = dataSource === 'firestore'
+            ? await getFirestoreMessagesForMember(communityId, member.id)
+            : await getMessagesForMember(communityId, member.id);
+        setMessages(fetchedMessages);
+      } catch (error) {
+        console.error("Failed to fetch messages:", error);
+        setMessages([]);
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [communityId, member, dataSource, firestoreMessages, firestoreLoading]);
+    fetchMessages();
+  }, [communityId, member, dataSource]);
 
   const handleSummarize = async () => {
     if (!user || messages.length === 0 || !member) return;
