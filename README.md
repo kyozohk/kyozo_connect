@@ -1,4 +1,4 @@
-tt # Firebase Studio
+merett # Firebase Studio
 
 This is a NextJS starter in Firebase Studio.
 
