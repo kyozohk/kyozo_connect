@@ -1,3 +1,4 @@
+
 'use server';
 
 import admin from 'firebase-admin';
@@ -24,16 +25,17 @@ function initializeAdminApp(env: 'dev' | 'prod') {
 
   try {
     const serviceAccount = JSON.parse(serviceAccountKey);
-    const appName = `firebase-admin-app-${env}-${Date.now()}`; // Unique name
+    // Use a consistent name for the app instance per environment
+    const appName = `firebase-admin-app-${env}`;
     
-    // Check if an app with this name already exists
-     const existingAppByName = admin.apps.find(app => app?.name === appName);
+    // Find an existing initialized app by its consistent name
+    const existingAppByName = admin.apps.find(app => app?.name === appName);
     if (existingAppByName) {
       adminApps.set(env, existingAppByName);
       return existingAppByName;
     }
 
-
+    // Initialize a new app if one doesn't exist
     const newApp = admin.initializeApp(
       {
         credential: admin.credential.cert(serviceAccount),
