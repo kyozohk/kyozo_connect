@@ -3,7 +3,7 @@
 import { Community } from "@/types";
 import Image from "next/image";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { LayoutGrid, Users, MapPin, Globe, Edit, UserPlus, Send } from "lucide-react";
+import { LayoutGrid, Users, MapPin, Globe, Edit, UserPlus, Send, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -16,9 +16,10 @@ import {
 
 interface CommunityHeaderProps {
     community: Community;
+    onDelete?: () => void;
 }
 
-export function CommunityHeader({ community }: CommunityHeaderProps) {
+export function CommunityHeader({ community, onDelete }: CommunityHeaderProps) {
     const data = community.data as any;
     const tags = data.tags && Array.isArray(data.tags) ? data.tags : [];
     const visibleTags = tags.slice(0, 5);
@@ -96,6 +97,11 @@ export function CommunityHeader({ community }: CommunityHeaderProps) {
                     <Button variant="outline" size="sm"><UserPlus className="h-4 w-4 mr-2" /> Add Members</Button>
                     <Button variant="outline" size="sm"><Send className="h-4 w-4 mr-2" /> Invite</Button>
                      <Button variant="outline" size="sm"><Send className="h-4 w-4 mr-2" /> Broadcast</Button>
+                      {onDelete && (
+                        <Button variant="destructive" size="sm" onClick={onDelete}>
+                            <Trash2 className="h-4 w-4 mr-2" /> Delete Community
+                        </Button>
+                    )}
                 </div>
 
                 {data.colorPalette && (
