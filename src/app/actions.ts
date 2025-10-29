@@ -14,6 +14,8 @@ type UserData = {
   email: string;
   displayName: string;
   photoURL: string;
+  firstName?: string;
+  lastName?: string;
 };
 
 export async function upsertUser(userData: UserData) {
@@ -25,6 +27,8 @@ export async function upsertUser(userData: UserData) {
         email: userData.email,
         displayName: userData.displayName,
         photoURL: userData.photoURL,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
       },
       $setOnInsert: {
         uid: userData.uid,

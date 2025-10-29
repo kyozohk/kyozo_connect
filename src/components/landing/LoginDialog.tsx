@@ -36,9 +36,9 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   
   const [signInForm, setSignInForm] = useState({ email: '', password: '' });
-  const [signUpForm, setSignUpForm] = useState({ fullName: '', email: '', password: '', confirmPassword: '', terms: false });
+  const [signUpForm, setSignUpForm] = useState({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '', terms: false });
   const [resetForm, setResetForm] = useState({ email: '' });
-  const [errors, setErrors] = useState({ email: '', password: '', fullName: '', confirmPassword: '', terms: '', resetEmail: '' });
+  const [errors, setErrors] = useState({ email: '', password: '', firstName: '', lastName: '', confirmPassword: '', terms: '', resetEmail: '' });
   const [authError, setAuthError] = useState('');
   const [authSuccess, setAuthSuccess] = useState('');
   const [showTerms, setShowTerms] = useState(false);
@@ -84,11 +84,19 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      const displayName = user.displayName || '';
+      const nameParts = displayName.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
       await upsertUser({
-          uid: result.user.uid,
-          email: result.user.email!,
-          displayName: result.user.displayName!,
-          photoURL: result.user.photoURL!,
+          uid: user.uid,
+          email: user.email!,
+          displayName: displayName,
+          photoURL: user.photoURL!,
+          firstName,
+          lastName,
       });
       handleAuthSuccess();
     } catch (error: any) {
@@ -116,10 +124,14 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
   };
 
   const validateSignUp = () => {
-    const newErrors = { ...errors, fullName: '', email: '', password: '', confirmPassword: '', terms: '' };
+    const newErrors = { ...errors, firstName: '', lastName: '', email: '', password: '', confirmPassword: '', terms: '' };
     let isValid = true;
-    if (!signUpForm.fullName) {
-      newErrors.fullName = 'Name is required';
+    if (!signUpForm.firstName) {
+      newErrors.firstName = 'First name is required';
+      isValid = false;
+    }
+     if (!signUpForm.lastName) {
+      newErrors.lastName = 'Last name is required';
       isValid = false;
     }
     if (!signUpForm.email) {
@@ -167,16 +179,19 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
     setAuthSuccess('');
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, signUpForm.email, signUpForm.password);
-      const photoURL = `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(signUpForm.fullName)}`;
+      const displayName = `${signUpForm.firstName} ${signUpForm.lastName}`.trim();
+      const photoURL = `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(displayName)}`;
       await updateProfile(userCredential.user, {
-        displayName: signUpForm.fullName,
+        displayName: displayName,
         photoURL: photoURL
       });
       await upsertUser({
           uid: userCredential.user.uid,
           email: userCredential.user.email!,
-          displayName: signUpForm.fullName,
+          displayName: displayName,
           photoURL: photoURL,
+          firstName: signUpForm.firstName,
+          lastName: signUpForm.lastName,
       });
       handleAuthSuccess();
     } catch (error: any) {
@@ -266,9 +281,15 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
                           </>
                         ) : (
                           <>
-                            <div className="login-form-group">
-                              <Input type="text" placeholder="Your Name" value={signUpForm.fullName} onChange={(e) => setSignUpForm(prev => ({ ...prev, fullName: e.target.value }))} required />
-                              {errors.fullName && <p className="text-destructive text-xs mt-1">{errors.fullName}</p>}
+                            <div className="flex gap-4">
+                                <div className="login-form-group w-1/2">
+                                <Input type="text" placeholder="First Name" value={signUpForm.firstName} onChange={(e) => setSignUpForm(prev => ({ ...prev, firstName: e.target.value }))} required />
+                                {errors.firstName && <p className="text-destructive text-xs mt-1">{errors.firstName}</p>}
+                                </div>
+                                <div className="login-form-group w-1/2">
+                                <Input type="text" placeholder="Last Name" value={signUpForm.lastName} onChange={(e) => setSignUpForm(prev => ({ ...prev, lastName: e.target.value }))} required />
+                                {errors.lastName && <p className="text-destructive text-xs mt-1">{errors.lastName}</p>}
+                                </div>
                             </div>
                             <div className="login-form-group">
                               <Input type="email" placeholder="Your Email" value={signUpForm.email} onChange={(e) => setSignUpForm(prev => ({ ...prev, email: e.target.value }))} required />
