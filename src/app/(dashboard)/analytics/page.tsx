@@ -7,23 +7,29 @@ async function getAnalyticsData() {
   try {
     const adminDb = await getAdminDb();
 
-    const communitiesSnapshot = await adminDb.collection('communities').get();
-    const membersSnapshot = await adminDb.collection('memberships').get();
-    
-    // To get total messages, we need to iterate through communities
-    let totalMessages = 0;
-    for (const communityDoc of communitiesSnapshot.docs) {
-      const messagesSnapshot = await communityDoc.ref.collection('messages').get();
-      totalMessages += messagesSnapshot.size;
-    }
+    // Use efficient count aggregations instead of fetching all documents
+    const communitiesCountPromise = adminDb.collection('communities').count().get();
+    const membersCountPromise = adminDb.collection('memberships').count().get();
+    const messagesCountPromise = adminDb.collectionGroup('messages').count().get();
+
+    const [
+        communitiesCountSnapshot,
+        membersCountSnapshot,
+        messagesCountSnapshot
+    ] = await Promise.all([
+        communitiesCountPromise,
+        membersCountPromise,
+        messagesCountPromise
+    ]);
 
     return {
-      totalCommunities: communitiesSnapshot.size,
-      totalMembers: membersSnapshot.size,
-      totalMessages: totalMessages,
+      totalCommunities: communitiesCountSnapshot.data().count,
+      totalMembers: membersCountSnapshot.data().count,
+      totalMessages: messagesCountSnapshot.data().count,
     };
   } catch (error) {
     console.error("Error fetching analytics data:", error);
+    // If there's an error (e.g., missing index for collectionGroup), fallback gracefully
     return {
       totalCommunities: 0,
       totalMembers: 0,
