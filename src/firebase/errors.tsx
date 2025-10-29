@@ -10,7 +10,7 @@ export const errorEmitter = new EventEmitter();
 
 export type SecurityRuleContext = {
   path: string;
-  operation: 'get' | 'list' | 'create' | 'update' | 'delete';
+  operation: 'get' | 'list' | 'create' | 'update' | 'delete' | 'write';
   requestResourceData?: any;
 };
 
@@ -20,7 +20,7 @@ export class FirestorePermissionError extends Error {
   originalError: FirestoreError;
 
   constructor(
-    context: SecurityRuleCtxt,
+    context: SecurityRuleContext,
     originalError: FirestoreError = new FirestoreError('permission-denied', 'Missing or insufficient permissions.')
   ) {
     const message = `Firestore Permission Denied: ${context.operation.toUpperCase()} on /${context.path}`;

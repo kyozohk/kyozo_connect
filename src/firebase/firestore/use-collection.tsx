@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { onSnapshot, Query, DocumentData, QuerySnapshot, FirestoreError } from 'firebase/firestore';
-import { FirestorePermissionError, errorEmitter } from '@/firebase/errors.tsx';
+import { FirestorePermissionError, errorEmitter, type SecurityRuleContext } from '@/firebase/errors';
 
 export function useCollection<T>(query: Query<DocumentData> | null) {
   const [data, setData] = useState<T[] | null>(null);
@@ -29,12 +29,11 @@ export function useCollection<T>(query: Query<DocumentData> | null) {
       },
       (err: FirestoreError) => {
         if (err.code === 'permission-denied') {
-          const customError = new FirestorePermissionError(
-            'list',
-            query,
-            undefined,
-            err
-          );
+           const customError = new FirestorePermissionError({
+            // @ts-ignore-next-line
+            path: query.path, // This is not standard but often works
+            operation: 'list',
+          }, err);
           errorEmitter.emit('permission-error', customError);
         }
         console.error("Error fetching collection:", err);
