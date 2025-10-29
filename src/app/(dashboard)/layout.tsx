@@ -77,7 +77,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {navItems.map((item) => (
                <SidebarMenuItem key={item.href}>
                  <Link href={item.href} passHref>
-                    <SidebarMenuButton as="a" isActive={pathname.startsWith(item.href)} tooltip={item.label}>
+                    <SidebarMenuButton isActive={pathname.startsWith(item.href)} tooltip={item.label}>
                       <item.icon />
                       <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                     </SidebarMenuButton>
