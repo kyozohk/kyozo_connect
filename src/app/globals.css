@@ -14,13 +14,13 @@ body {
     --card-foreground: 259 34% 10%;
     --popover: 270 20% 97%;
     --popover-foreground: 259 34% 10%;
-    --primary: 259 34% 63%;
+    --primary: 261 100% 72%;
     --primary-foreground: 0 0% 100%;
     --secondary: 259 10% 85%;
     --secondary-foreground: 259 34% 10%;
     --muted: 259 10% 85%;
     --muted-foreground: 259 10% 55%;
-    --accent: 200 17% 41%;
+    --accent: 333 100% 71%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
@@ -32,7 +32,7 @@ body {
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
+    --radius: 9999px;
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 259 34% 63%;
@@ -77,13 +77,13 @@ body {
     --card-foreground: 270 20% 90%;
     --popover: 259 15% 15%;
     --popover-foreground: 270 20% 90%;
-    --primary: 259 34% 63%;
+    --primary: 261 100% 72%;
     --primary-foreground: 0 0% 100%;
     --secondary: 259 15% 20%;
     --secondary-foreground: 0 0% 98%;
     --muted: 259 15% 20%;
     --muted-foreground: 270 10% 60%;
-    --accent: 200 17% 50%;
+    --accent: 333 100% 71%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
@@ -525,7 +525,7 @@ body {
     padding: 0.875rem 1rem;
     background: var(--accent-purple);
     border: none;
-    border-radius: 8px;
+    border-radius: 9999px;
     color: white;
     font-weight: 600;
     font-size: 1rem;
@@ -545,3 +545,5 @@ body {
     transform: none;
   }
 }
+
+    

@@ -6,7 +6,7 @@ import { signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, create
 import { upsertUser } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { Loader2, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 
 interface SimpleAuthDialogProps {
@@ -226,7 +226,7 @@ const SimpleAuthDialog: React.FC<SimpleAuthDialogProps> = ({ isOpen, onClose }) 
                 className="auth-submitButton"
                 disabled={isLoading}
               >
-                {isLoading ? <Loader2 className="animate-spin"/> : 'Sign In'}
+                {isLoading ? 'Signing in...' : 'Sign In'}
               </button>
             </form>
           )}
@@ -271,7 +271,7 @@ const SimpleAuthDialog: React.FC<SimpleAuthDialogProps> = ({ isOpen, onClose }) 
                 className="auth-submitButton"
                 disabled={isLoading}
               >
-                {isLoading ? <Loader2 className="animate-spin"/> : 'Create Account'}
+                {isLoading ? 'Creating account...' : 'Create Account'}
               </button>
             </form>
           )}
@@ -282,3 +282,5 @@ const SimpleAuthDialog: React.FC<SimpleAuthDialogProps> = ({ isOpen, onClose }) 
 };
 
 export default SimpleAuthDialog;
+
+    

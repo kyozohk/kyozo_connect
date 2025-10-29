@@ -77,7 +77,7 @@ const FixedFooter: React.FC<FixedFooterProps> = ({ className = '' }) => {
           {user ? (
             <Button
               onClick={handleLogout}
-              className="joinButton"
+              className="joinButton bg-accent"
               size="sm"
               disabled={isLoggingOut}
             >
@@ -86,7 +86,7 @@ const FixedFooter: React.FC<FixedFooterProps> = ({ className = '' }) => {
           ) : (
             <Button
               onClick={openDialog}
-              className="joinButton"
+              className="joinButton bg-accent"
               size="sm"
             >
               Get Started
@@ -104,3 +104,5 @@ const FixedFooter: React.FC<FixedFooterProps> = ({ className = '' }) => {
 };
 
 export default FixedFooter;
+
+    
