@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny all reads and writes
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Users can manage their own profile
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Communities can be read by any authenticated user
+    match /communities/{communityId} {
+      allow get, list: if request.auth != null;
+      // More granular write rules can be added here later
+      allow write: if request.auth != null; 
+
+      // Messages can be read by any authenticated user within a community
+      match /messages/{messageId} {
+        allow read, create: if request.auth != null;
+        // Allow updates/deletes only by the message author
+        allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      }
+    }
+
+    // Allow authenticated users to list memberships, which is needed for many UI components.
+    // Individual documents can be read if the user is part of that community (a more advanced rule).
+    match /memberships/{membershipId} {
+       allow list, get: if request.auth != null;
+       // Create/update/delete rules can be more specific, e.g., only by an admin or the user themselves.
+       allow write: if request.auth != null;
+    }
+  }
+}
