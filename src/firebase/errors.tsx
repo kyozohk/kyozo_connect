@@ -1,32 +1,32 @@
+
 'use client';
 
-import { DocumentReference, Query, FirestoreError, DocumentData, onSnapshot, getDoc } from 'firebase/firestore';
+import { FirestoreError } from 'firebase/firestore';
 import { EventEmitter } from 'events';
 import React, { useEffect, useState } from 'react';
 
 // Centralized event emitter for error handling
 export const errorEmitter = new EventEmitter();
 
+export type SecurityRuleContext = {
+  path: string;
+  operation: 'get' | 'list' | 'create' | 'update' | 'delete';
+  requestResourceData?: any;
+};
+
 // Define a custom error for Firestore permission issues
 export class FirestorePermissionError extends Error {
-  operation: 'get' | 'list' | 'read' | 'create' | 'update' | 'delete';
-  ref: DocumentReference | Query;
-  resource?: any;
+  context: SecurityRuleContext;
   originalError: FirestoreError;
 
   constructor(
-    operation: 'get' | 'list' | 'read'| 'create' | 'update' | 'delete',
-    ref: DocumentReference | Query,
-    resource?: any,
+    context: SecurityRuleCtxt,
     originalError: FirestoreError = new FirestoreError('permission-denied', 'Missing or insufficient permissions.')
   ) {
-    const path = ref instanceof DocumentReference ? ref.path : (ref as Query)._query.path.segments.join('/');
-    const message = `Firebase Firestore: ${originalError.message} (Operation: ${operation}, Path: ${path})`;
+    const message = `Firestore Permission Denied: ${context.operation.toUpperCase()} on /${context.path}`;
     super(message);
     this.name = 'FirestorePermissionError';
-    this.operation = operation;
-    this.ref = ref;
-    this.resource = resource;
+    this.context = context;
     this.originalError = originalError;
   }
 }
@@ -51,6 +51,13 @@ export const FirebaseErrorListener: React.FC = () => {
   if (!error) {
     return null;
   }
+  
+  const authContext = {
+      // In a real app, you'd get this from your auth state
+      // This is a placeholder for demonstration
+      uid: 'some-user-uid',
+      token: { name: 'Current User' }
+  };
 
   // Render a detailed error overlay
   return (
@@ -58,37 +65,43 @@ export const FirebaseErrorListener: React.FC = () => {
       position: 'fixed',
       inset: 0,
       zIndex: 9999,
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      backgroundColor: 'rgba(10, 0, 0, 0.85)',
       color: 'white',
       padding: '2rem',
       overflowY: 'auto',
-      fontFamily: 'monospace'
+      fontFamily: 'monospace',
+      fontSize: '14px',
+      lineHeight: '1.6',
     }}>
-      <h2 style={{ color: '#ff6b6b', borderBottom: '1px solid #ff6b6b', paddingBottom: '0.5rem' }}>
+       <h2 style={{ color: '#ff6b6b', borderBottom: '1px solid #ff6b6b', paddingBottom: '0.5rem', fontSize: '1.5rem' }}>
         Firestore Security Rule Error
       </h2>
-      <p style={{ marginTop: '1rem' }}>Your app tried to perform an operation that your security rules denied.</p>
+      <p style={{ marginTop: '1rem', color: '#ccc' }}>Your app tried to perform an operation that your security rules denied.</p>
       
-      <div style={{ marginTop: '1.5rem', background: '#2d2d2d', padding: '1rem', borderRadius: '4px' }}>
-        <p><strong>Operation:</strong> <code style={{ color: '#f0e68c' }}>{error.operation.toUpperCase()}</code></p>
-        <p><strong>Path:</strong> <code style={{ color: '#f0e68c' }}>{error.ref instanceof DocumentReference ? error.ref.path : (error.ref as any)._query.path.segments.join('/')}</code></p>
+      <div style={{ marginTop: '1.5rem', background: '#1a1a1a', padding: '1rem', borderRadius: '8px', border: '1px solid #333' }}>
+        <p><strong>Operation:</strong> <code style={{ color: '#f0e68c', background: '#2b2b2b', padding: '2px 4px', borderRadius: '4px' }}>{error.context.operation.toUpperCase()}</code></p>
+        <p style={{marginTop: '0.5rem'}}><strong>Path:</strong> <code style={{ color: '#f0e68c', background: '#2b2b2b', padding: '2px 4px', borderRadius: '4px' }}>/{error.context.path}</code></p>
+      </div>
+      
+      <div style={{ marginTop: '1.5rem', background: '#1a1a1a', padding: '1rem', borderRadius: '8px', border: '1px solid #333' }}>
+          <strong>Request Details:</strong>
+           <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', background: '#2b2b2b', padding: '1rem', borderRadius: '4px', marginTop: '0.5rem' }}>
+            {JSON.stringify({
+                auth: authContext,
+                method: error.context.operation,
+                path: `/${error.context.path}`,
+                resource: error.context.requestResourceData || null,
+                timestamp: new Date().toISOString()
+            }, null, 2)}
+          </pre>
       </div>
 
-       {error.resource && (
-        <div style={{ marginTop: '1rem' }}>
-          <strong>Request Data:</strong>
-          <pre style={{ background: '#2d2d2d', padding: '1rem', borderRadius: '4px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-            {JSON.stringify(error.resource, null, 2)}
-          </pre>
-        </div>
-      )}
-
-      <div style={{ marginTop: '1.5rem' }}>
+       <div style={{ marginTop: '1.5rem' }}>
         <p><strong>Next Steps:</strong></p>
-        <ol style={{ paddingLeft: '1.5rem', listStyle: 'decimal' }}>
-          <li style={{ marginBottom: '0.5rem' }}>Review the operation and the path above.</li>
-          <li>Open your <code style={{ background: '#2d2d2d', padding: '0.2rem 0.4rem', borderRadius: '2px' }}>firestore.rules</code> file.</li>
-          <li style={{ marginBottom: '0.5rem' }}>Adjust the rules to allow this specific operation for the authenticated user.</li>
+        <ol style={{ paddingLeft: '1.5rem', listStyle: 'decimal', color: '#ccc' }}>
+          <li style={{ marginBottom: '0.5rem' }}>Review the operation, path, and request data above.</li>
+          <li>Open your <code style={{ background: '#2b2b2b', padding: '0.2rem 0.4rem', borderRadius: '2px' }}>firestore.rules</code> file.</li>
+          <li style={{ marginBottom: '0.5rem' }}>Adjust the rules to allow this specific operation for the authenticated user based on the request details.</li>
         </ol>
       </div>
 
@@ -96,12 +109,13 @@ export const FirebaseErrorListener: React.FC = () => {
         onClick={() => setError(null)}
         style={{
             marginTop: '2rem',
-            padding: '0.5rem 1rem',
+            padding: '0.75rem 1.5rem',
             background: '#ff6b6b',
             border: 'none',
             color: 'white',
             borderRadius: '4px',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            fontSize: '1rem'
         }}
        >
         Close

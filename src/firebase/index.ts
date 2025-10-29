@@ -1,3 +1,4 @@
+
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
@@ -7,7 +8,7 @@ import { FirebaseClientProvider } from './client-provider';
 import { useCollection } from './firestore/use-collection';
 import { useDoc } from './firestore/use-doc';
 import { useUser } from './auth/use-user';
-import { FirestorePermissionError, errorEmitter, FirebaseErrorListener } from './errors.tsx';
+import { FirestorePermissionError, errorEmitter, FirebaseErrorListener } from './errors';
 
 
 const firebaseConfig = {
