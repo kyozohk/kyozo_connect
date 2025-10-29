@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from "@/components/ui/button";
-import SimpleAuthDialog from './SimpleAuthDialog';
+import LoginDialog from './LoginDialog';
 import { useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter, usePathname } from 'next/navigation';
@@ -20,7 +20,6 @@ const FixedFooter: React.FC<FixedFooterProps> = ({ className = '' }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // Auto-redirect authenticated users to dashboard
   useEffect(() => {
     if (user && (pathname === '/' || pathname === '/login')) {
       router.replace('/analytics');
@@ -29,7 +28,7 @@ const FixedFooter: React.FC<FixedFooterProps> = ({ className = '' }) => {
 
   const openDialog = () => {
     if (!user) {
-      setIsDialogOpen(true);
+      router.push('/login');
     } else {
       router.push('/analytics');
     }
@@ -44,7 +43,6 @@ const FixedFooter: React.FC<FixedFooterProps> = ({ className = '' }) => {
     setIsLoggingOut(true);
     try {
       await signOut(auth);
-      // Let the main page handle the redirect, or explicitly redirect
       router.push('/');
     } catch (error) {
       console.error('Logout error:', error);
@@ -53,56 +51,57 @@ const FixedFooter: React.FC<FixedFooterProps> = ({ className = '' }) => {
     }
   };
 
-  // Don't render footer on dashboard pages
-  if (pathname?.startsWith('/analytics') || pathname?.startsWith('/communities') || pathname?.startsWith('/inbox') || pathname?.startsWith('/migrate') || pathname?.startsWith('/firebase') || pathname?.startsWith('/settings') || pathname?.startsWith('/subscription') || pathname?.startsWith('/team') ) {
+  const isDashboardPage = pathname?.startsWith('/analytics') || 
+                           pathname?.startsWith('/communities') || 
+                           pathname?.startsWith('/inbox') || 
+                           pathname?.startsWith('/migrate') || 
+                           pathname?.startsWith('/firebase') || 
+                           pathname?.startsWith('/settings') || 
+                           pathname?.startsWith('/subscription') || 
+                           pathname?.startsWith('/team');
+
+  if (isDashboardPage || loading) {
     return null;
-  }
-  
-  if (loading) {
-    return null; // Don't show footer while checking auth state
   }
 
 
   return (
-    <footer className={`fixedFooter ${className}`}>
-      <div className="footer-container">
-        <div className="logoButtonContainer">
-          <Image 
-            src="/logo.png" 
-            alt="Kyozo Logo" 
-            width={100} 
-            height={30} 
-            className="buttonLogo"
-          />
-          {user ? (
-            <Button
-              onClick={handleLogout}
-              className="joinButton bg-accent"
-              size="sm"
-              disabled={isLoggingOut}
-            >
-              {isLoggingOut ? <Loader2 className="animate-spin" /> : 'Sign Out'}
-            </Button>
-          ) : (
-            <Button
-              onClick={openDialog}
-              className="joinButton bg-accent"
-              size="sm"
-            >
-              Get Started
-            </Button>
-          )}
+    <>
+      <footer className={`fixedFooter ${className}`}>
+        <div className="footer-container">
+          <div className="logoButtonContainer">
+            <Image 
+              src="/logo.png" 
+              alt="Kyozo Logo" 
+              width={100} 
+              height={30} 
+              className="buttonLogo"
+            />
+            {user ? (
+              <Button
+                onClick={handleLogout}
+                className="joinButton"
+                style={{ backgroundColor: 'var(--accent-pink)'}}
+                size="sm"
+                disabled={isLoggingOut}
+              >
+                {isLoggingOut ? <Loader2 className="animate-spin" /> : 'Sign Out'}
+              </Button>
+            ) : (
+              <Button
+                onClick={openDialog}
+                className="joinButton"
+                style={{ backgroundColor: 'var(--accent-pink)'}}
+                size="sm"
+              >
+                Get Started
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
-      
-      <SimpleAuthDialog 
-        isOpen={isDialogOpen} 
-        onClose={closeDialog}
-      />
-    </footer>
+      </footer>
+    </>
   );
 };
 
 export default FixedFooter;
-
-    
