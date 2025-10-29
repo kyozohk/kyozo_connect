@@ -1,9 +1,7 @@
+
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { getMembers } from '@/app/actions';
-import { useCollection, useFirestore } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
 import { Member } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -24,77 +22,35 @@ const roleIcons = {
 
 
 export function MemberList({ 
-    communityId, 
+    communityId,
+    initialMembers,
     onSelectMember,
     initialSelectedMemberId,
     dataSource,
 }: { 
     communityId: string;
+    initialMembers: Member[];
     onSelectMember: (member: Member | null) => void;
     initialSelectedMemberId?: string;
     dataSource: DataSource;
 }) {
-  const [members, setMembers] = useState<Member[]>([]);
+  const [members, setMembers] = useState<Member[]>(initialMembers || []);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMemberId, setSelectedMemberId] = useState<string | undefined>(initialSelectedMemberId);
   const { toast } = useToast();
 
-  const firestore = useFirestore();
-  const membersQuery = useMemo(() => {
-    if (!firestore || !communityId || dataSource !== 'firestore') return null;
-    return query(collection(firestore, 'memberships'), where('communityId', '==', communityId));
-  }, [firestore, communityId, dataSource]);
-
-  const { data: firestoreMembers, loading: firestoreLoading } = useCollection<Member>(membersQuery);
-
   useEffect(() => {
-    if (dataSource === 'firestore') {
-      if (firestoreMembers) {
-        // Here you would typically map the membership doc to a full member object
-        // This might require another fetch to the `users` collection for each member
-        // For simplicity, we'll assume the membership doc has enough info or you'd enhance this
-        // This is a simplified version. A real app might need to fetch user profiles.
-        const memberData = firestoreMembers.map(doc => ({
-            id: doc.userId,
-            uid: doc.userId,
-            displayName: doc.displayName || 'Unknown',
-            photoURL: doc.photoURL || '',
-            email: doc.email || '',
-            role: doc.role || 'member',
-            phoneNumber: doc.phoneNumber || '',
-            joinedAt: doc.joinedAt?.toDate().toISOString(),
-            data: doc,
-        }));
-        setMembers(memberData as Member[]);
-      }
-      setLoading(firestoreLoading);
-    } else {
-      if (!communityId) {
-        setMembers([]);
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      getMembers(communityId)
-        .then(fetchedMembers => {
-          setMembers(fetchedMembers);
-          if (initialSelectedMemberId) {
-            const memberToSelect = fetchedMembers.find(m => m.id === initialSelectedMemberId);
-            onSelectMember(memberToSelect || null);
-          }
-        })
-        .finally(() => setLoading(false));
-    }
-  }, [communityId, dataSource, firestoreMembers, firestoreLoading, initialSelectedMemberId, onSelectMember]);
-
-  useEffect(() => {
-    if (initialSelectedMemberId && members.length > 0) {
-      const memberToSelect = members.find(m => m.id === initialSelectedMemberId);
+    setMembers(initialMembers || []);
+    if (initialSelectedMemberId) {
+      const memberToSelect = initialMembers.find(m => m.id === initialSelectedMemberId);
       onSelectMember(memberToSelect || null);
       setSelectedMemberId(initialSelectedMemberId);
+    } else {
+      setSelectedMemberId(undefined);
+      onSelectMember(null);
     }
-  }, [initialSelectedMemberId, members, onSelectMember]);
+  }, [communityId, initialMembers, initialSelectedMemberId, onSelectMember]);
 
 
   const handleSelectMember = (member: Member) => {
