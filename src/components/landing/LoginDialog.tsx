@@ -245,23 +245,29 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
                         {activeTab === 'signin' ? (
                           <>
                             <div className="login-form-group">
-                              <Input
-                                type="email"
-                                placeholder="Your Email"
-                                value={signInForm.email}
-                                onChange={(e) => setSignInForm(prev => ({ ...prev, email: e.target.value }))}
-                                required
-                              />
+                                <div className={`input-container ${errors.email ? 'input-error' : ''}`}>
+                                    <Input
+                                        type="email"
+                                        placeholder="Your Email"
+                                        value={signInForm.email}
+                                        onChange={(e) => setSignInForm(prev => ({ ...prev, email: e.target.value }))}
+                                        required
+                                        className="input-field"
+                                    />
+                                </div>
                                {errors.email && <p className="text-destructive text-xs mt-1">{errors.email}</p>}
                             </div>
                             <div className="password-wrapper">
                               <div className="password-input-group">
-                                  <PasswordInput
-                                    placeholder="Password"
-                                    value={signInForm.password}
-                                    onChange={(e) => setSignInForm(prev => ({ ...prev, password: e.target.value }))}
-                                    required
-                                  />
+                                  <div className={`input-container ${errors.password ? 'input-error' : ''}`}>
+                                    <PasswordInput
+                                        placeholder="Password"
+                                        value={signInForm.password}
+                                        onChange={(e) => setSignInForm(prev => ({ ...prev, password: e.target.value }))}
+                                        required
+                                        className="input-field"
+                                    />
+                                  </div>
                                   {errors.password && <p className="text-destructive text-xs mt-1">{errors.password}</p>}
                               </div>
                               <div className="forgot-password-container">
@@ -283,24 +289,34 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
                           <>
                             <div className="flex gap-4">
                                 <div className="login-form-group w-1/2">
-                                <Input type="text" placeholder="First Name" value={signUpForm.firstName} onChange={(e) => setSignUpForm(prev => ({ ...prev, firstName: e.target.value }))} required />
+                                <div className={`input-container ${errors.firstName ? 'input-error' : ''}`}>
+                                    <Input type="text" placeholder="First Name" value={signUpForm.firstName} onChange={(e) => setSignUpForm(prev => ({ ...prev, firstName: e.target.value }))} required className="input-field" />
+                                </div>
                                 {errors.firstName && <p className="text-destructive text-xs mt-1">{errors.firstName}</p>}
                                 </div>
                                 <div className="login-form-group w-1/2">
-                                <Input type="text" placeholder="Last Name" value={signUpForm.lastName} onChange={(e) => setSignUpForm(prev => ({ ...prev, lastName: e.target.value }))} required />
+                                 <div className={`input-container ${errors.lastName ? 'input-error' : ''}`}>
+                                    <Input type="text" placeholder="Last Name" value={signUpForm.lastName} onChange={(e) => setSignUpForm(prev => ({ ...prev, lastName: e.target.value }))} required className="input-field" />
+                                 </div>
                                 {errors.lastName && <p className="text-destructive text-xs mt-1">{errors.lastName}</p>}
                                 </div>
                             </div>
                             <div className="login-form-group">
-                              <Input type="email" placeholder="Your Email" value={signUpForm.email} onChange={(e) => setSignUpForm(prev => ({ ...prev, email: e.target.value }))} required />
+                                <div className={`input-container ${errors.email ? 'input-error' : ''}`}>
+                                  <Input type="email" placeholder="Your Email" value={signUpForm.email} onChange={(e) => setSignUpForm(prev => ({ ...prev, email: e.target.value }))} required className="input-field" />
+                                </div>
                               {errors.email && <p className="text-destructive text-xs mt-1">{errors.email}</p>}
                             </div>
                             <div className="login-form-group">
-                              <PasswordInput placeholder="Create a password" value={signUpForm.password} onChange={(e) => setSignUpForm(prev => ({ ...prev, password: e.target.value }))} required />
+                                <div className={`input-container ${errors.password ? 'input-error' : ''}`}>
+                                  <PasswordInput placeholder="Create a password" value={signUpForm.password} onChange={(e) => setSignUpForm(prev => ({ ...prev, password: e.target.value }))} required className="input-field" />
+                                </div>
                               {errors.password && <p className="text-destructive text-xs mt-1">{errors.password}</p>}
                             </div>
                             <div className="login-form-group">
-                              <PasswordInput placeholder="Confirm password" value={signUpForm.confirmPassword} onChange={(e) => setSignUpForm(prev => ({ ...prev, confirmPassword: e.target.value }))} required />
+                                <div className={`input-container ${errors.confirmPassword ? 'input-error' : ''}`}>
+                                  <PasswordInput placeholder="Confirm password" value={signUpForm.confirmPassword} onChange={(e) => setSignUpForm(prev => ({ ...prev, confirmPassword: e.target.value }))} required className="input-field" />
+                                </div>
                               {errors.confirmPassword && <p className="text-destructive text-xs mt-1">{errors.confirmPassword}</p>}
                             </div>
                             <div className="login-form-group">

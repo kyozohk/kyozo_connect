@@ -106,6 +106,7 @@
     --card-bg: #181818;
     --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
     --accent-pink: #ff6ea9;
+    --accent-blue: #6ea8ff;
     --accent-purple: #a76eff;
     --accent-purple-hover: #9353f5;
     --border-color: #333;
@@ -425,7 +426,7 @@
   .login-subtitle { @apply text-base m-0; line-height: 1.5; color: var(--text-secondary); }
 
   .login-form-content { @apply flex-1 flex flex-col justify-start mb-4 min-h-0; }
-  .login-form-group { @apply mb-4; }
+  .login-form-group { @apply mb-4 w-full; }
 
   .password-wrapper { @apply relative w-full max-w-[450px] mb-4; }
   .password-input-group { @apply relative w-full; }
@@ -453,6 +454,35 @@
   .login-error-icon, .login-success-icon { @apply shrink-0 text-sm; }
 
   .google-button-content { @apply flex items-center justify-center gap-2; }
+
+  /* New Input styles */
+  .input-container {
+    @apply relative w-full max-w-[450px] box-border;
+  }
+  .input-container::before {
+    content: '';
+    @apply absolute top-[-1px] left-[-1px] right-[-1px] bottom-[-1px] rounded-md opacity-0 transition-opacity duration-200 ease-in-out z-0 border border-transparent;
+    background-image: linear-gradient(var(--card-bg), var(--card-bg)), linear-gradient(90deg, var(--accent-pink), var(--accent-blue));
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+  }
+  .input-container.input-error::before {
+    opacity: 1;
+    background-image: linear-gradient(var(--card-bg), var(--card-bg)), linear-gradient(90deg, var(--accent-pink), var(--accent-pink));
+  }
+  .input-container:focus-within::before {
+    opacity: 1;
+  }
+  .input-field {
+    @apply relative w-full h-12 px-4 py-2 text-base rounded-md;
+    @apply bg-input text-foreground border border-border;
+    @apply ring-offset-background;
+    @apply placeholder:text-muted-foreground;
+    @apply focus-visible:outline-none focus-visible:border-transparent z-10;
+  }
+   .input-field:focus {
+    border-color: transparent;
+  }
 
 }
 
