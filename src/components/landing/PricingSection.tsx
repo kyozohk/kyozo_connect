@@ -68,7 +68,9 @@ const PricingSection = () => {
             </div>
           ))}
         </div>
-        <Button variant="outline" asChild size="lg"><a href="#">Join the waitlist</a></Button>
+        <Button variant="outline" asChild size="lg">
+          <a href="#">Join the waitlist</a>
+        </Button>
       </div>
     </section>
   );
