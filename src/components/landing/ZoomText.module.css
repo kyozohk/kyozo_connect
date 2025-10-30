@@ -1,0 +1,43 @@
+.container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.title {
+  text-align: center;
+  max-width: 1200px;
+  padding: 0 2rem;
+  margin: 0;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  transform-origin: center center;
+  color: hsl(var(--foreground));
+}
+
+.title.loaded {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.title.loading {
+  opacity: 0.3;
+  transform: scale(0.1);
+}
+
+.word {
+  display: inline-block;
+  margin: 0 0.5rem;
+}
+
+.letter {
+  display: inline-block;
+  color: hsl(var(--foreground));
+}
+
+.space {
+  display: inline-block;
+  width: 0.3rem;
+}

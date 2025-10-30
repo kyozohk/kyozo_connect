@@ -1,0 +1,226 @@
+.cardContainer {
+  width: calc(100% - 4rem);
+  height: calc(100vh - 8rem);
+  margin-top: 10rem;
+  margin-left: 2rem;
+  margin-right: 2rem;
+  margin-bottom: 6rem;
+  
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  position: relative;
+  overflow: hidden;
+  z-index: 3;
+  isolation: isolate;
+  
+  border-radius: 30px;
+  backdrop-filter: blur(10px);
+  background-color: hsla(var(--card) / 0.8);
+  border: 0.5px solid hsl(var(--border));
+  box-shadow: 0 10px 25px -5px hsla(var(--primary) / 0.1), 0 8px 10px -6px hsla(var(--primary) / 0.1);
+}   
+
+.cardContent {
+  display: flex;
+  flex-direction: row;
+  gap: 40px;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: auto;
+}
+
+@media (max-width: 768px) {
+  .cardContent {
+    flex-direction: column-reverse;
+  }
+}
+
+.leftContent {
+  width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 0 0 160px;
+  margin-bottom: 30px;
+  justify-content: flex-end;
+  height: 100%;
+}
+
+.rightContent {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: visible;
+}
+
+.cardTitle {
+  font-size: 4.8rem;
+  font-weight: 700;
+  margin: 0;
+  background-clip: text;
+  -webkit-background-clip: text;
+  line-height: 1.0;
+  color: hsl(var(--foreground));
+}
+
+.cardDescription {
+  font-size: 1.2rem;
+  line-height: 1.6;
+  margin: 0;
+  padding-top: 30px;
+  padding-bottom: 30px;
+  color: hsl(var(--foreground));
+}
+
+.phoneContainer {
+  position: relative;
+  width: 420px;
+  height: 640px;
+  z-index: 2;
+  margin-bottom: -30px;
+  margin-left: -100px;
+  overflow: hidden;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.phoneImage {
+  object-fit: cover;
+  object-position: left top;
+  width: 378px;
+  height: 594px;
+  margin-bottom: -30px;
+  z-index: 1;
+}
+
+.backgroundGradient {
+  position: absolute;
+  top: 50%;
+  right: -5%;
+  width: 1000px;
+  height: 1000px;
+  transform: translateY(-50%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.phoneBackgroundGradient {
+  width: 1000px;
+  height: 1000px;
+  border-radius: 50%;
+  background-color: transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.phoneBackgroundGradient::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200%;
+  height: 200%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: transparent;
+  background-image: 
+    conic-gradient(
+      from 0deg,
+      #7b3b78,
+      #2b4b8f,
+      #e78b76,
+      #7b3b78
+    );
+  -webkit-mask: 
+    radial-gradient(circle at center, 
+      transparent 10%, 
+      transparent 26%, 
+      rgba(0, 0, 0, 0.0525) 27%,
+      rgba(0, 0, 0, 0.21) 28%,
+      rgba(0, 0, 0, 0.3675) 29%, 
+      rgba(0, 0, 0, 0.3675) 31%,
+      rgba(0, 0, 0, 0.21) 32%,
+      rgba(0, 0, 0, 0.0525) 33%,
+      transparent 34%
+    );
+  mask: 
+    radial-gradient(circle at center, 
+      transparent 0%, 
+      transparent 26%, 
+      rgba(0, 0, 0, 0.0525) 27%,
+      rgba(0, 0, 0, 0.21) 28%,
+      rgba(0, 0, 0, 0.3675) 29%, 
+      rgba(0, 0, 0, 0.3675) 31%,
+      rgba(0, 0, 0, 0.21) 32%,
+      rgba(0, 0, 0, 0.0525) 33%,
+      transparent 34%
+    );
+  filter: blur(1px);
+  animation: expandRing 2s infinite;
+}
+  
+.phoneBackgroundGradient::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200%;
+  height: 200%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: transparent;
+  background-image: 
+    conic-gradient(
+      from 0deg,
+      #7b3b78,
+      #2b4b8f,
+      #e78b76,
+      #7b3b78
+    );
+  -webkit-mask: 
+    radial-gradient(circle at center, 
+      transparent 10%, 
+      transparent 26%, 
+      rgba(0, 0, 0, 0.0525) 27%,
+      rgba(0, 0, 0, 0.21) 28%,
+      rgba(0, 0, 0, 0.3675) 29%, 
+      rgba(0, 0, 0, 0.3675) 31%,
+      rgba(0, 0, 0, 0.21) 32%,
+      rgba(0, 0, 0, 0.0525) 33%,
+      transparent 34%
+    );
+  mask: 
+    radial-gradient(circle at center, 
+      transparent 0%, 
+      transparent 26%, 
+      rgba(0, 0, 0, 0.0525) 27%,
+      rgba(0, 0, 0, 0.21) 28%,
+      rgba(0, 0, 0, 0.3675) 29%, 
+      rgba(0, 0, 0, 0.3675) 31%,
+      rgba(0, 0, 0, 0.21) 32%,
+      rgba(0, 0, 0, 0.0525) 33%,
+      transparent 34%
+    );
+  filter: blur(1px);
+  animation: expandRing 2s infinite 1.4s;
+}
+
+
+@keyframes expandRing {
+  0% {
+    width: 50%;
+    height: 50%;
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    width: 200%;
+    height: 200%;
+    opacity: 0;
+  }
+}

@@ -1,0 +1,117 @@
+
+.gradientBorder {
+  position: relative;
+  width: 84%; 
+  max-width: 38.4rem;
+  border-radius: 1.5rem;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--from-color) 0%, var(--from-color) 30%, rgba(102, 102, 102, 0.8) 70%, rgba(102, 102, 102, 0.8) 100%);
+}
+
+.card {
+  position: relative;
+  background-color: hsl(var(--card));
+  color: hsl(var(--foreground));
+  border-radius: 1.4375rem;
+  padding: 2rem;
+  overflow: hidden;
+  height: 408px;
+}
+
+@media (min-width: 768px) {
+  .card {
+    padding: 2.5rem;
+  }
+}
+
+.backgroundPattern {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.patternSvg {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+  opacity: 0.03;
+  color: hsl(var(--muted-foreground));
+}
+
+.cardContent {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+}
+
+
+.title {
+  font-size: 3.6rem;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  color: hsl(var(--foreground));
+  margin: 0;
+}
+
+.divider {
+  margin: 1rem 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, hsl(var(--muted-foreground)), transparent);
+}
+
+.subtitle {
+  color: var(--from-color);
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.price {
+  margin-top: 0.5rem;
+  font-size: 1.8rem;
+  color: hsl(var(--foreground));
+}
+
+.price span {
+  font-weight: 200;
+}
+
+.featuresList {
+  margin-top: 1.5rem;
+  font-size: 0.96rem;
+  font-weight: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  list-style: none;
+  padding: 0;
+}
+
+.featureItem {
+  display: flex;
+  align-items: center;
+  transition: all 0.5s ease-out;
+}
+
+.featureItem.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.featureItem.hidden {
+  opacity: 0;
+  transform: translateY(1rem);
+}
+
+.featureItem span {
+  margin-left: 0.9rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.checkIcon {
+  width: 1.2rem;
+  height: 1.2rem;
+  flex-shrink: 0;
+  color: hsl(var(--foreground));
+}

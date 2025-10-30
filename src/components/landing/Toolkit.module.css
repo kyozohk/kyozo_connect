@@ -1,0 +1,140 @@
+.socialMediaSection {
+    position: relative;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 1rem;
+    text-align: center;
+    overflow: visible;
+    z-index: auto;
+  }
+  
+  .socialMediaTitle {
+    font-size: 6.6rem;
+    font-weight: 900;
+    line-height: 1.1 !important;
+    color: hsl(var(--foreground));
+    margin-bottom: 1rem;
+  }
+  
+  @media (max-width: 640px) {
+    .socialMediaTitle {
+      font-size: 3.3rem;
+    }
+  }
+  
+  .socialMediaBubble {
+    margin-top: 1rem;
+    padding: 1.8rem 4.2rem;
+    background-color: hsl(var(--card));
+    border-radius: 9999px;
+    box-shadow: 0 0 30px hsla(var(--foreground) / 0.05);
+    backdrop-filter: blur(12px);
+    border: 1px solid hsla(var(--border) / 0.5);
+    display: inline-block;
+  }
+  
+  .socialMediaText {
+    font-size: 2.5rem;
+    font-weight: 700;
+    letter-spacing: 0.025em;
+    color: hsl(var(--foreground));
+  }
+  
+  @media (max-width: 640px) {
+    .socialMediaText {
+      font-size: 1.5rem;
+    }
+  }
+  
+  .creativeLabSection {
+    position: relative;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 16rem 1.5rem;
+    overflow: hidden;
+  }
+  
+  @media (min-width: 640px) {
+    .creativeLabSection {
+      padding: 6rem 2rem;
+    }
+  }
+  
+  .gridContainer {
+    display: grid;
+    grid-template-columns: 1fr;
+    font-weight: 300;
+    font-size: 1.8rem;
+    position: relative;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  @media (min-width: 768px) {
+    .gridContainer {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 3rem 4rem;
+    }
+  }
+  
+  .leftColumn {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    height: 100%;
+  }
+  
+  .rightColumn {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    height: 100%;
+  }
+  
+  .creativeLabTitle {
+    font-size: 4.5rem;
+    font-weight: 900;
+    line-height: 1.1 !important;
+    color: hsl(var(--foreground));
+    margin: 0;
+  }
+  
+  @media (max-width: 768px) {
+    .creativeLabTitle {
+      font-size: 3rem;
+      margin-bottom: 2rem;
+    }
+  }
+  
+  .description {
+    font-size: 1rem;
+    line-height: 1.625;
+    max-width: 28rem;
+    color: hsl(var(--muted-foreground));
+    margin-bottom: 2rem;
+  }
+  
+  .ctaLink {
+    margin-top: 1rem;
+    color: hsl(var(--primary));
+    font-weight: 600;
+    font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    text-decoration: none;
+  }
+  
+  .ctaLink:hover {
+    text-decoration: underline;
+  }
+  
+  .ctaLink svg {
+    margin-left: 0.5rem;
+  }
+  

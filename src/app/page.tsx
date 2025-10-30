@@ -14,8 +14,12 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && user) {
-      router.replace('/analytics');
+    if (!loading) {
+      if (user) {
+        router.replace('/analytics');
+      } else {
+        router.replace('/landing');
+      }
     }
   }, [user, loading, router]);
 

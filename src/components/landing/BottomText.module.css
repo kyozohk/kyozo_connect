@@ -1,0 +1,108 @@
+.container {
+  min-height: 80vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+  padding-bottom: 6rem;
+}
+
+.shapesContainer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.leftShape {
+  width: 20%;
+  height: 20vh;
+  position: relative;
+}
+
+.rightShape {
+  width: 20%;
+  height: 20vh;
+  position: relative;
+}
+
+.mainText {
+  margin: 0 0 2rem 0;
+  z-index: 2;
+}
+
+.buttonContainer {
+  margin-top: 1rem;
+  margin-bottom: 4rem;
+  z-index: 2;
+}
+
+.buttonContainer.loaded {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  transition-delay: 0.5s;
+}
+
+.buttonContainer.loading {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.copyright {
+  width: 100%;
+  margin-top: 4rem;
+  text-align: center;
+  font-size: 0.875rem;
+  z-index: 2;
+  color: hsl(var(--foreground));
+}
+
+.copyright.loaded {
+  opacity: 1;
+  transition: opacity 0.5s ease;
+  transition-delay: 0.7s;
+}
+
+.copyright.loading {
+  opacity: 0;
+}
+
+.imageLoaded {
+  opacity: 1;
+  transition: opacity 1s ease-in-out;
+}
+
+.imageLoading {
+  opacity: 0;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+  
+  .leftShape, .rightShape {
+    width: 25%;
+    height: 15vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .leftShape, .rightShape {
+    width: 30%;
+    height: 12vh;
+  }
+  
+  .copyright {
+    font-size: 0.75rem;
+  }
+}

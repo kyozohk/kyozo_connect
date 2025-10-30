@@ -1,0 +1,51 @@
+.scrollRevealContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh; /* Set to 80vh as requested */
+  width: 100%;
+  overflow: hidden;
+  z-index: 5;
+  padding: 2rem;
+}
+
+.scrollRevealText {
+  text-align: center;
+  line-height: 1.1;
+  color: hsl(var(--foreground));
+  margin: 0;
+  padding: 0;
+}
+
+@media (max-width: 768px) {
+  .scrollRevealText {
+    font-size: 4rem !important;
+  }
+}
+
+.word {
+  display: inline-block;
+  margin-right: 0.5rem;
+}
+
+.word:last-child {
+  margin-right: 0;
+}
+
+.letter {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.letter.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.wordSpace {
+  display: inline-block;
+  width: 0.5rem;
+}

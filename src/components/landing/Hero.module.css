@@ -1,0 +1,127 @@
+/* Hero component styles adapted for nextjs-themed-app */
+
+.heroContainer {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+/*   padding: 100px 20px; */
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--foreground));
+  background-color: transparent;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  left: 50%;
+  right: 50%;
+}
+
+.gradient {
+  position: absolute;
+  filter: blur(100px);
+  z-index: 1;
+  opacity: 0.15;
+}
+
+.topLeft {
+  top: -100px;
+  left: 0;
+  width: 1600px;
+  height: 1000px;
+  background: radial-gradient(circle, #2dd4bf, transparent 50%); /* Teal color */
+  transform: translate(-33.33%, -33.33%);
+  border-radius: 50%;
+}
+
+.topRight {
+  opacity: 0.21; /* 30% more transparent */
+  top: -400px;
+  right: -400px;
+  width: 1400px;
+  height: 1400px;
+  background: radial-gradient(circle, #f97316, transparent 90%); /* Orange color */
+  transform: translate(0, -33.33%);
+  border-radius: 50%;
+}
+
+.bottomRight {
+  bottom: -2000px;
+  right: 10rem;
+  width: 2600px;
+  height: 2600px;
+  background: radial-gradient(circle, #a855f7, transparent 70%); /* Purple color */
+  transform: translate(33.33%, 33.33%);
+  pointer-events: none;
+}
+
+@keyframes fadeInScaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.topAnimationContainer {
+  position: absolute;
+  top: -20px;
+  left: 60%;
+  transform: translate(-50%, -50%);
+  opacity: 0.8;
+  width: 100%;
+  max-width: 1000px;
+  overflow: visible;
+  height: 480px;
+  z-index: 2;
+}
+
+.animatedSvg {
+  animation: fadeInScaleUp 1.5s cubic-bezier(0.22, 1, 0.36, 1) 0.2s backwards;
+}
+
+.heroContent {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.heroTitle {
+  font-size: 7rem;
+  font-weight: 800;
+  text-align: center;
+  max-width: 1200px;
+  line-height: 1.1;
+  color: hsl(var(--foreground));
+}
+
+.word {
+  display: inline-block;
+  margin: 0 0.5rem; /* Increased margin for better spacing */
+  white-space: nowrap;
+}
+
+.wordSpace {
+  display: inline-block;
+  width: 0.3rem; /* Additional space between words */
+}
+
+.letter {
+  display: inline-block;
+  transition: color 0.5s ease, opacity 0.5s ease, transform 0.5s ease;
+  opacity: 0.3;
+  transform: translateY(20px);
+  color: hsl(var(--foreground));
+}
+
+.letter.loaded {
+  opacity: 1;
+  transform: translateY(0);
+  color: hsl(var(--foreground));
+}
