@@ -1,0 +1,58 @@
+.pricingCard {
+    background-color: hsl(var(--card));
+    border-radius: 1rem;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  
+  .header {
+    margin-bottom: 2rem;
+  }
+  
+  .header h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  
+  .header p:first-of-type {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+  
+  .header p:last-of-type {
+    color: hsl(var(--muted-foreground));
+  }
+  
+  .features {
+    flex-grow: 1;
+  }
+  
+  .features ul {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .features li {
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+  }
+  
+  .features li::before {
+    content: '✓';
+    color: hsl(var(--primary));
+    margin-right: 0.5rem;
+  }
+  
+  .footer {
+    margin-top: 2rem;
+  }
+  
+  .footer button {
+    width: 100%;
+  }
+  
