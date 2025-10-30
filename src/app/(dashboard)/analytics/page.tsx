@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, MessagesSquare, LayoutGrid } from 'lucide-react';
 
 async function getAnalyticsData() {
+  try {
     const adminDb = await getAdminDb();
 
     // Use efficient count aggregations instead of fetching all documents
@@ -26,6 +27,15 @@ async function getAnalyticsData() {
       totalMembers: membersCountSnapshot.data().count,
       totalMessages: messagesCountSnapshot.data().count,
     };
+  } catch (error) {
+    console.error("Error fetching analytics data:", error);
+    // If there's an error (e.g., missing index for collectionGroup), fallback gracefully
+    return {
+      totalCommunities: 0,
+      totalMembers: 0,
+      totalMessages: 0,
+    };
+  }
 }
 
 
