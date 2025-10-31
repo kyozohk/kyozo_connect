@@ -1,12 +1,14 @@
 
-'use server';
 
 import admin from 'firebase-admin';
+import { getApps, initializeApp, cert, App } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 
 // This is a map of initialized Firebase admin apps
-const adminApps = new Map<string, admin.app.App>();
+const adminApps = new Map<string, App>();
 
-function initializeAdminApp(env: 'dev' | 'prod') {
+function initializeAdminApp(env: 'dev' | 'prod'): App {
   const existingApp = adminApps.get(env);
   if (existingApp) {
     return existingApp;
@@ -25,20 +27,19 @@ function initializeAdminApp(env: 'dev' | 'prod') {
 
   try {
     const serviceAccount = JSON.parse(serviceAccountKey);
-    // Use a consistent name for the app instance per environment
-    const appName = `firebase-admin-app-${env}`;
-    
-    // Find an existing initialized app by its consistent name
-    const existingAppByName = admin.apps.find(app => app?.name === appName);
+    const appName = `firebase-admin-app-${env}-${Math.random().toString(36).substring(7)}`;
+
+    // Use getApps() to check if the app is already initialized
+    const existingAppByName = getApps().find(app => app.name === appName);
     if (existingAppByName) {
       adminApps.set(env, existingAppByName);
       return existingAppByName;
     }
 
     // Initialize a new app if one doesn't exist
-    const newApp = admin.initializeApp(
+    const newApp = initializeApp(
       {
-        credential: admin.credential.cert(serviceAccount),
+        credential: cert(serviceAccount),
       },
       appName
     );
@@ -51,16 +52,15 @@ function initializeAdminApp(env: 'dev' | 'prod') {
   }
 }
 
-function getAdminApp() {
+function getAdminApp(): App {
     const env = process.env.NODE_ENV === 'production' ? 'prod' : 'dev';
-    // Ensure the app for the current environment is initialized
     return initializeAdminApp(env);
 }
 
-export async function getAdminAuth() {
-  return getAdminApp().auth();
+export function getAdminAuth() {
+  return getAuth(getAdminApp());
 }
 
-export async function getAdminDb() {
-  return getAdminApp().firestore();
+export function getAdminDb() {
+  return getFirestore(getAdminApp());
 }
