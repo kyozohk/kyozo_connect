@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Users } from 'lucide-react';
 import { DataSource } from './dashboard-client';
+import { getMembers } from '@/app/actions';
 
 const roleIcons = {
   owner: Crown,
@@ -23,34 +24,64 @@ const roleIcons = {
 
 export function MemberList({ 
     communityId,
-    initialMembers,
     onSelectMember,
     initialSelectedMemberId,
     dataSource,
 }: { 
     communityId: string;
-    initialMembers: Member[];
     onSelectMember: (member: Member | null) => void;
     initialSelectedMemberId?: string;
     dataSource: DataSource;
 }) {
-  const [members, setMembers] = useState<Member[]>(initialMembers || []);
+  const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMemberId, setSelectedMemberId] = useState<string | undefined>(initialSelectedMemberId);
   const { toast } = useToast();
 
+  // Fetch members when communityId changes
   useEffect(() => {
-    setMembers(initialMembers || []);
-    if (initialSelectedMemberId) {
-      const memberToSelect = initialMembers.find(m => m.id === initialSelectedMemberId);
-      onSelectMember(memberToSelect || null);
-      setSelectedMemberId(initialSelectedMemberId);
-    } else {
-      setSelectedMemberId(undefined);
-      onSelectMember(null);
-    }
-  }, [communityId, initialMembers, initialSelectedMemberId, onSelectMember]);
+    const fetchMembers = async () => {
+      if (!communityId) {
+        setMembers([]);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        console.log(`[MemberList] Fetching members for community: ${communityId}`);
+        const fetchedMembers = await getMembers(communityId);
+        console.log(`[MemberList] Fetched ${fetchedMembers.length} members`);
+        setMembers(fetchedMembers);
+
+        // If there's an initialSelectedMemberId, select that member
+        if (initialSelectedMemberId) {
+          const memberToSelect = fetchedMembers.find(m => m.id === initialSelectedMemberId);
+          if (memberToSelect) {
+            onSelectMember(memberToSelect);
+            setSelectedMemberId(initialSelectedMemberId);
+          } else {
+            onSelectMember(null);
+            setSelectedMemberId(undefined);
+          }
+        } else {
+          onSelectMember(null);
+          setSelectedMemberId(undefined);
+        }
+      } catch (error) {
+        console.error(`[MemberList] Error fetching members:`, error);
+        toast({
+          title: "Error",
+          description: "Failed to load members. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMembers();
+  }, [communityId, initialSelectedMemberId, onSelectMember, toast]);
 
 
   const handleSelectMember = (member: Member) => {

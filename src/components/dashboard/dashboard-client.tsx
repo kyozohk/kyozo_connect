@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Community, Member } from '@/types';
 import { CommunityList } from './community-list';
@@ -20,21 +20,28 @@ export function DashboardClient({
   searchParams?: { [key: string]: string | string[] | undefined };
   dataSource: DataSource;
 }) {
+  // Safely parse search params to avoid direct access issues
+  const parsedSearchParams = useMemo(() => {
+    if (!searchParams) return {};
+    return {
+      communityId: typeof searchParams.communityId === 'string' ? searchParams.communityId : undefined,
+      memberId: typeof searchParams.memberId === 'string' ? searchParams.memberId : undefined
+    };
+  }, [searchParams]);
   const router = useRouter();
   const pathname = usePathname();
   const updateTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const getInitialCommunityId = () => {
-    const communityIdFromParams = searchParams?.communityId;
-    if (typeof communityIdFromParams === 'string' && communities.some(c => c.id === communityIdFromParams)) {
+    const communityIdFromParams = parsedSearchParams.communityId;
+    if (communityIdFromParams && communities.some(c => c.id === communityIdFromParams)) {
       return communityIdFromParams;
     }
     return '';
   };
   
   const getInitialMemberId = () => {
-    const memberIdFromParams = searchParams?.memberId;
-    return typeof memberIdFromParams === 'string' ? memberIdFromParams : undefined;
+    return parsedSearchParams.memberId;
   };
 
 
@@ -104,7 +111,7 @@ export function DashboardClient({
               onSelectMember={handleSelectMember}
               initialSelectedMemberId={getInitialMemberId()}
               dataSource={dataSource}
-              />
+            />
           </ResizablePanel>
           <ResizableHandle withHandle />
           <ResizablePanel defaultSize={50} minSize={30}>
