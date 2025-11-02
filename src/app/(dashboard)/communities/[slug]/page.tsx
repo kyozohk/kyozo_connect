@@ -1,10 +1,11 @@
 
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getFirestoreCommunities, getFirestoreMembers, deleteCommunityFromFirestore } from '@/app/fire/actions';
-import { useFirestore } from '@/firebase';
+import { collection, query, where, doc, deleteDoc, getDocs } from 'firebase/firestore';
+import { deleteCommunityFromFirestore } from '@/app/fire/actions';
+import { useFirestore, useCollection, useDoc } from '@/firebase';
 import { CommunityHeader } from '@/components/communities/community-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, LayoutGrid, TrendingUp, MessagesSquare, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -34,31 +35,47 @@ const INITIAL_DIALOG_STATE: DialogState = {
 };
 
 export default function CommunityOverviewPage({ params }: { params: { slug: string } }) {
-  const { slug } = params;
+  // In Next.js 15, params properties should be unwrapped with React.use
+  // But we need to cast it to the correct type first
+  const resolvedParams = React.use(params as unknown as Promise<{ slug: string }>);
+  const { slug } = resolvedParams;
   const router = useRouter();
   const firestore = useFirestore();
-  const [community, setCommunity] = useState<Community | null>(null);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [loading, setLoading] = useState(true);
   const [dialogState, setDialogState] = useState<DialogState>(INITIAL_DIALOG_STATE);
-
-  useState(() => {
-    async function fetchData() {
-      const communities = await getFirestoreCommunities();
-      const currentCommunity = communities.find(c => (c.data?.slug || c.id) === slug);
-
-      if (!currentCommunity) {
-        notFound();
-        return;
-      }
-      
-      setCommunity(currentCommunity);
-      const memberData = await getFirestoreMembers(currentCommunity.id);
-      setMembers(memberData);
-      setLoading(false);
-    }
-    fetchData();
-  });
+  
+  // Query communities by slug or ID
+  const communitiesQuery = firestore ? query(
+    collection(firestore, 'communities')
+  ) : null;
+  
+  // Use real-time collection hook for communities
+  const { data: communities, loading: communitiesLoading } = useCollection<Community>(communitiesQuery);
+  
+  // Find the current community by slug or ID
+  const community = communities?.find(c => {
+    // Check if the slug matches directly
+    if (c.data?.slug === slug) return true;
+    // Check if the ID matches
+    if (c.id === slug) return true;
+    // Check if the slug is stored in the data object
+    return false;
+  }) || null;
+  
+  // If we have a community, query its members
+  const membersQuery = community && firestore ? 
+    query(collection(firestore, 'memberships'), where('communityId', '==', community.id)) : 
+    null;
+  
+  // Use real-time collection hook for members
+  const { data: members, loading: membersLoading } = useCollection<Member>(membersQuery);
+  
+  // Combined loading state
+  const loading = communitiesLoading || membersLoading || !community;
+  
+  // Redirect to 404 if community not found and not loading
+  if (!communitiesLoading && !community) {
+    notFound();
+  }
   
   const handleDeleteRequest = () => {
     setDialogState({ status: 'confirming-delete', message: null });
@@ -98,7 +115,7 @@ export default function CommunityOverviewPage({ params }: { params: { slug: stri
   const messageCount = (community as any).messageCount || 0;
 
   const stats = [
-    { title: 'Total Members', value: members.length, icon: Users },
+    { title: 'Total Members', value: members?.length || 0, icon: Users },
     { title: 'Communities', value: 0, icon: LayoutGrid }, // Placeholder
     { title: 'Monthly Growth', value: "+0", icon: TrendingUp }, // Placeholder
     { title: 'Daily Messages', value: 0, icon: MessagesSquare }, // Placeholder

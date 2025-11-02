@@ -5,7 +5,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Member, Community } from '@/types';
 import { MemberList } from '@/components/dashboard/member-list';
-import { MessageList } from '@/components/dashboard/message-list';
+import { MessageListClient } from '@/components/dashboard/message-list-client';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 
 export function CommunityInboxClient({ 
@@ -75,7 +75,7 @@ export function CommunityInboxClient({
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={70} minSize={30}>
-          <MessageList
+          <MessageListClient
             key={`firestore-${community?.id}-${selectedMember?.id}`}
             communityId={community?.id || ''}
             communityName={community?.name}
