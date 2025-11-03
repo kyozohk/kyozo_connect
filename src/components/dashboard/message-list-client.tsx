@@ -78,6 +78,7 @@ export function MessageListClient({
             photoURL: data.userPhotoURL || '',
           };
           
+          // Create a message object with sender and recipient information
           fetchedMessages.push({
             id: doc.id,
             text: data.text,
@@ -85,6 +86,12 @@ export function MessageListClient({
               ? data.createdAt.toDate().toISOString() 
               : new Date().toISOString(),
             sender,
+            // Include recipient information if available
+            recipient: data.recipientId ? {
+              id: data.recipientId,
+              displayName: data.recipientName || 'Unknown Recipient',
+              photoURL: data.recipientPhotoURL || '',
+            } : undefined,
             data: data,
           });
         });
@@ -146,20 +153,26 @@ export function MessageListClient({
       );
     }
     
-    // Filter by selected member if using member-specific view
-    if (member && dataSource !== 'firestore') {
+    // Filter by selected member if a member is selected
+    // We want to show messages to/from the selected member regardless of data source
+    if (member) {
       filtered = filtered.filter(m => 
-        m.sender.id === member.id || m.sender.id === 'system'
+        // Show messages from the selected member
+        m.sender.id === member.id || 
+        // Show messages to the selected member
+        m.data?.recipientId === member.id ||
+        // Always show system messages
+        m.sender.id === 'system'
       );
     }
     
     return filtered;
-  }, [messages, searchQuery, member, dataSource]);
+  }, [messages, searchQuery, member]);
 
-  const messageListTitle = dataSource === 'firestore' 
-    ? 'Community Channel' 
-    : member 
-    ? `Messages with ${member.displayName}` 
+  const messageListTitle = member
+    ? `Messages with ${member.displayName}`
+    : dataSource === 'firestore'
+    ? 'Community Channel'
     : 'Messages';
 
   return (
@@ -216,6 +229,11 @@ export function MessageListClient({
                   <div className="flex-1">
                     <div className="flex items-baseline space-x-2">
                       <p className="text-sm font-medium">{message.sender.displayName}</p>
+                      {message.recipient && (
+                        <p className="text-xs text-muted-foreground">
+                          to {message.recipient.displayName}
+                        </p>
+                      )}
                       <p className="text-xs text-muted-foreground">
                         {message.createdAt ? formatDistanceToNow(new Date(message.createdAt), { addSuffix: true }) : ''}
                       </p>

@@ -1,75 +1,42 @@
-'use client';
-
-import React, { Suspense } from 'react';
+import { Suspense } from 'react';
+import { getCommunityBySlug } from '@/app/actions/community-actions';
 import { notFound } from 'next/navigation';
 import { CommunityInboxClient } from './inbox-client';
-import { collection, query, where } from 'firebase/firestore';
-import { useFirestore, useCollection } from '@/firebase';
-import { Community, Member } from '@/types';
 import { InboxSkeleton } from '@/components/skeletons/community-skeleton';
 
-export default function CommunityInboxPage({ 
+// Loading component for Suspense fallback
+function InboxLoading() {
+  return <InboxSkeleton />;
+}
+
+export default async function CommunityInboxPage({ 
     params,
     searchParams 
 }: { 
     params: { slug: string };
     searchParams?: { [key: string]: string | string[] | undefined };
 }) {
-  // In Next.js 15, params properties should be unwrapped with React.use
-  const resolvedParams = React.use(params as unknown as Promise<{ slug: string }>);
+  // Properly handle params as an async API
+  const resolvedParams = await Promise.resolve(params);
   const { slug } = resolvedParams;
   
-  return (
-    <Suspense fallback={<InboxSkeleton />}>
-      <InboxContent slug={slug} searchParams={searchParams} />
-    </Suspense>
-  );
-}
-
-function InboxContent({ 
-  slug, 
-  searchParams 
-}: { 
-  slug: string;
-  searchParams?: { [key: string]: string | string[] | undefined };
-}) {
-  const firestore = useFirestore();
+  // Fetch community data on the server
+  const { community, members } = await getCommunityBySlug(slug);
   
-  // Query communities by slug
-  const communitiesQuery = firestore ? query(
-    collection(firestore, 'communities'),
-    where('data.slug', '==', slug)
-  ) : null;
-  
-  // Use real-time collection hook for communities
-  const { data: communities, loading: communitiesLoading } = useCollection<Community>(communitiesQuery);
-  
-  // Find the current community
-  const community = communities?.find(c => ((c.data?.slug || c.id) === slug)) || null;
-  
-  // If we have a community, query its members
-  const membersQuery = community && firestore ? 
-    query(collection(firestore, 'memberships'), where('communityId', '==', community.id)) : 
-    null;
-  
-  // Use real-time collection hook for members
-  const { data: members, loading: membersLoading } = useCollection<Member>(membersQuery);
-  
-  // Redirect to 404 if community not found and not loading
-  if (!communitiesLoading && !community) {
+  // Redirect to 404 if community not found
+  if (!community) {
     notFound();
-    return null;
-  }
-  
-  if (communitiesLoading || membersLoading || !members || !community) {
-    return <InboxSkeleton />;
   }
   
   return (
-    <CommunityInboxClient 
-      community={community}
-      initialMembers={members}
-      searchParams={searchParams}
-    />
+    <div className="h-full">
+      <Suspense fallback={<InboxLoading />}>
+        <CommunityInboxClient 
+          community={community}
+          initialMembers={members}
+          searchParams={searchParams}
+        />
+      </Suspense>
+    </div>
   );
 }

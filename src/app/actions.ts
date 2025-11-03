@@ -215,9 +215,12 @@ export async function getCommunityExportData(communityId: string, onStep: (step:
     if (!rawMongoCommunity) {
       throw new Error('Community not found in MongoDB');
     }
+    // Create a proper date object for migratedAt
+    const migratedAtDate = new Date();
+    
     const finalCommunityData = JSON.parse(JSON.stringify({
         ...rawMongoCommunity,
-        migratedAt: new Date(), 
+        migratedAt: migratedAtDate.toISOString(), // Use ISO string format for serialization
     }));
     delete finalCommunityData._id;
     delete finalCommunityData.usersList;
@@ -250,12 +253,26 @@ export async function getCommunityExportData(communityId: string, onStep: (step:
         const joinedAt = userJoinDateMap.get(memberMongoId);
 
         const { _id, __v, firebaseUid, ...restOfUser } = JSON.parse(JSON.stringify(user));
+        
+        // Make sure joinedAt is a valid date or use current date
+        let joinedAtDate;
+        if (joinedAt) {
+          if (typeof joinedAt === 'string' || typeof joinedAt === 'number') {
+            joinedAtDate = new Date(joinedAt);
+          } else if (joinedAt instanceof Date) {
+            joinedAtDate = joinedAt;
+          } else {
+            joinedAtDate = new Date(); // Fallback to current date
+          }
+        } else {
+          joinedAtDate = new Date(); // Fallback to current date
+        }
 
         return {
           communityId: communityId,
           userId: `firebase-uid-placeholder-${user.email}`,
           role: role,
-          joinedAt: joinedAt ? new Date(joinedAt) : new Date(),
+          joinedAt: joinedAtDate,
           phoneNumber: user.phoneNumber, // Make sure phoneNumber is included
           ...restOfUser,
         };
@@ -350,14 +367,67 @@ export async function migrateCommunityToFirestore(communityId: string) {
            });
         } catch (e: any) {
           if (e.code === 'auth/user-not-found') {
+            // Always try to create a new Firebase Auth user
             isNewUser = true;
-            firebaseUser = await adminAuth.createUser({
-              email: user.email,
-              emailVerified: true,
-              displayName,
-              photoURL,
-              phoneNumber,
-            });
+            
+            // Generate a random password for the new user
+            const randomPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).toUpperCase().slice(-4) + '!1';
+            
+            try {
+              // Create a new user in Firebase Auth with email and password
+              firebaseUser = await adminAuth.createUser({
+                email: user.email,
+                emailVerified: true,
+                displayName,
+                photoURL,
+                phoneNumber,
+                password: randomPassword, // Set a random secure password
+              });
+              
+              console.log(`[MIGRATION_SUCCESS] Created new Firebase user for ${user.email} with ID ${firebaseUser.uid}`);
+            } catch (createError: any) {
+              console.error(`[MIGRATION_ERROR] Failed to create Firebase user for ${user.email}:`, createError);
+              
+              // Try a different approach - create a user with a custom UID based on the MongoDB ID
+              try {
+                const customUid = `mongo-${user._id.toString().substring(0, 20)}`; // Firebase UIDs are limited to 36 chars
+                
+                firebaseUser = await adminAuth.createUser({
+                  uid: customUid,
+                  email: user.email,
+                  emailVerified: true,
+                  displayName,
+                  photoURL,
+                  phoneNumber,
+                  password: randomPassword,
+                });
+                
+                console.log(`[MIGRATION_SUCCESS] Created Firebase user with custom UID for ${user.email}`);
+              } catch (customUidError) {
+                // If all attempts fail, use a placeholder ID but log the error
+                console.error(`[MIGRATION_ERROR] All attempts to create Firebase user failed for ${user.email}:`, customUidError);
+                
+                // Create a placeholder object that mimics UserRecord
+                firebaseUser = {
+                  uid: `placeholder-${user._id.toString()}`,
+                  email: user.email,
+                  displayName,
+                  photoURL,
+                  phoneNumber,
+                  toJSON: () => ({
+                    uid: `placeholder-${user._id.toString()}`,
+                    email: user.email,
+                    displayName,
+                    photoURL,
+                    phoneNumber,
+                    emailVerified: true,
+                    disabled: false,
+                    metadata: { creationTime: new Date().toISOString() },
+                    providerData: [{ providerId: 'password', email: user.email }]
+                  })
+                } as unknown as UserRecord;
+              }
+            }
           } else {
              throw e; // Re-throw other auth errors
           }
@@ -370,9 +440,8 @@ export async function migrateCommunityToFirestore(communityId: string) {
           photoURL: photoURL,
           fullName: user.fullName,
           migratedAt: FieldValue.serverTimestamp(),
+          originalMongoId: user._id.toString(), // Store the original MongoDB ID for reference
           // Add other fields from the mongo user doc as needed
-          // For example:
-          // someOtherField: user.someOtherField
         };
         if (phoneNumber) {
             firestoreUserProfile.phoneNumber = phoneNumber;
@@ -385,11 +454,20 @@ export async function migrateCommunityToFirestore(communityId: string) {
 
       } catch (e) {
         console.error(`[MIGRATION_ERROR] Failed to migrate user ${user.email} (MongoID: ${user._id}):`, e);
-        return null;
+        
+        // Even if there's an error, return a placeholder so we can still create the membership
+        // This ensures the community has all its members even if some user migrations fail
+        return { 
+          mongoId: user._id.toString(), 
+          firebaseUid: `placeholder-${user._id.toString()}`, 
+          isNewUser: true, 
+          phoneNumber: user.phoneNumber || null,
+          isPlaceholder: true
+        };
       }
     });
 
-    const migratedUsersResults = (await Promise.all(userMigrationPromises)).filter((res): res is { mongoId: string; firebaseUid: string; isNewUser: boolean; phoneNumber: string | null; } => res !== null);
+    const migratedUsersResults = (await Promise.all(userMigrationPromises)).filter((res): res is { mongoId: string; firebaseUid: string; isNewUser: boolean; phoneNumber: string | null; isPlaceholder?: boolean; } => res !== null);
     const uidMap = new Map(migratedUsersResults.map(u => [u.mongoId, u]));
 
     // ** Step 5: Migrate Community
@@ -403,13 +481,24 @@ export async function migrateCommunityToFirestore(communityId: string) {
         ...restOfCommunityData 
     } = sanitizedCommunity;
 
-    const finalCommunityData = {
+    // Create a proper date object for migratedAt
+    const migratedAtDate = new Date();
+    
+    // For Firestore, use serverTimestamp
+    const firestoreCommunityData = {
         ...restOfCommunityData,
         migratedAt: FieldValue.serverTimestamp(),
+        migratedAtISO: migratedAtDate.toISOString(), // Add ISO string version for serialization
     };
     
-    batch.set(firestoreCommunityRef, finalCommunityData);
-    exportedData = { community: finalCommunityData, memberships: [], messages: [] };
+    // For the exported data that will be passed to client components, use ISO string
+    const exportCommunityData = {
+        ...restOfCommunityData,
+        migratedAt: migratedAtDate.toISOString(),
+    };
+    
+    batch.set(firestoreCommunityRef, firestoreCommunityData);
+    exportedData = { community: exportCommunityData, memberships: [], messages: [] };
 
     // ** Step 6: Migrate Memberships
     const ownerMongoId = rawMongoCommunity.owner?.toString();
@@ -433,20 +522,42 @@ export async function migrateCommunityToFirestore(communityId: string) {
 
                 const joinedAt = userListItem.joinedAt;
                 
+                // Make sure joinedAt is a valid date or use current date
+                const joinedAtDate = joinedAt && typeof joinedAt !== 'object' 
+                  ? new Date(joinedAt) 
+                  : (joinedAt && joinedAt instanceof Date ? joinedAt : new Date());
+                
+                // Find the original MongoDB user to get more details
+                const mongoUser = await db.collection('users').findOne({ _id: new ObjectId(memberMongoId) });
+                
                 const membershipData: { [key: string]: any } = {
                   communityId: communityId,
                   userId: migratedUser.firebaseUid,
                   role: role,
-                  joinedAt: joinedAt ? new Date(joinedAt) : FieldValue.serverTimestamp(),
+                  joinedAt: joinedAtDate,
+                  originalMongoId: memberMongoId, // Store original MongoDB ID
+                  // Store user details directly in the membership for better display
+                  displayName: mongoUser?.fullName || mongoUser?.displayName || 'Unknown User',
+                  email: mongoUser?.email || '',
+                  photoURL: mongoUser?.profileImage || mongoUser?.photoURL || '',
                 };
 
                 // Add phoneNumber to the membership document if it exists
-                if (migratedUser.phoneNumber) {
-                    membershipData.phoneNumber = migratedUser.phoneNumber;
+                if (migratedUser.phoneNumber || mongoUser?.phoneNumber) {
+                    membershipData.phoneNumber = migratedUser.phoneNumber || mongoUser?.phoneNumber;
                 }
 
+                // If this is a new user or a placeholder, mark it
                 if (migratedUser.isNewUser) {
                   membershipData.passwordInitialized = false;
+                }
+                
+                if (migratedUser.isPlaceholder) {
+                  membershipData.isPlaceholder = true;
+                  membershipData.needsUserCreation = true;
+                  // Store original user details for placeholder users
+                  membershipData.originalUserName = mongoUser?.fullName || mongoUser?.displayName || 'Unknown User';
+                  membershipData.originalUserEmail = mongoUser?.email || '';
                 }
                 
                 // Use a sanitized version for the exported JSON
@@ -454,7 +565,48 @@ export async function migrateCommunityToFirestore(communityId: string) {
                 const membershipRef = adminDb.collection('memberships').doc();
                 batch.set(membershipRef, membershipData);
             } else {
-                console.warn(`[MIGRATION_WARN] Could not find migrated user for MongoID ${memberMongoId}. Skipping membership.`);
+                // Create a placeholder membership if we couldn't find the user
+                console.warn(`[MIGRATION_WARN] Could not find migrated user for MongoID ${memberMongoId}. Creating placeholder membership.`);
+                
+                let role: 'owner' | 'admin' | 'member' = 'member';
+                if (memberMongoId === ownerMongoId) {
+                  role = 'owner';
+                } else if (adminMongoIds.has(memberMongoId)) {
+                  role = 'admin';
+                }
+                
+                // Try to find the user in MongoDB to get more info
+                try {
+                  const mongoUser = await db.collection('users').findOne({ _id: new ObjectId(memberMongoId) });
+                  
+                  // Create a placeholder user ID based on the MongoDB ID
+                  const placeholderUserId = `placeholder-${memberMongoId}`;
+                  
+                  const membershipData: { [key: string]: any } = {
+                    communityId: communityId,
+                    userId: placeholderUserId,
+                    role: role,
+                    joinedAt: new Date(),
+                    isPlaceholder: true,
+                    originalMongoId: memberMongoId,
+                    needsUserCreation: true,
+                    // Store user details directly in the membership for better display
+                    displayName: mongoUser?.fullName || mongoUser?.displayName || 'Unknown User',
+                    email: mongoUser?.email || '',
+                    photoURL: mongoUser?.profileImage || mongoUser?.photoURL || '',
+                    phoneNumber: mongoUser?.phoneNumber || '',
+                    // Store original user details for placeholder users
+                    originalUserEmail: mongoUser?.email || '',
+                    originalUserName: mongoUser?.fullName || mongoUser?.displayName || 'Unknown User',
+                  };
+                  
+                  // Use a sanitized version for the exported JSON
+                  exportedData.memberships.push(JSON.parse(JSON.stringify(membershipData)));
+                  const membershipRef = adminDb.collection('memberships').doc();
+                  batch.set(membershipRef, membershipData);
+                } catch (error) {
+                  console.error(`[MIGRATION_ERROR] Failed to create placeholder membership for ${memberMongoId}:`, error);
+                }
             }
         }
     }
@@ -473,36 +625,129 @@ export async function migrateCommunityToFirestore(communityId: string) {
         const senderMongoId = (message.user || message.senderId)?.toString();
 
         if (!senderMongoId) {
-             console.warn(`[MIGRATION_WARN] Skipping message ID ${message._id} due to missing sender ID.`);
-             continue;
+            // For messages without a sender, use a system user
+            const systemMessageData = {
+                text: message.text || 'System message',
+                createdAt: message.createdAt || new Date(),
+                userId: 'system',
+                isSystemMessage: true,
+                originalMongoId: message._id.toString(),
+            };
+            
+            exportedData.messages.push(JSON.parse(JSON.stringify(systemMessageData)));
+            const messageRef = firestoreCommunityRef.collection('messages').doc();
+            batch.set(messageRef, systemMessageData);
+            continue;
         }
 
         const migratedUser = uidMap.get(senderMongoId);
         if (migratedUser) {
-            const messageData = {
-                text: message.text,
-                createdAt: message.createdAt,
+            // Ensure message text is not undefined
+            const messageText = message.text || ''; // Default to empty string if undefined
+            
+            // Skip messages with empty text
+            if (!messageText) {
+                console.log(`[MIGRATION_WARN] Skipping message ${message._id} due to empty text`);
+                continue;
+            }
+            
+            // Try to find the original user in MongoDB to get display info
+            let userName = 'Unknown User';
+            let userPhotoURL = '';
+            
+            try {
+                const mongoUser = await db.collection('users').findOne({ _id: new ObjectId(senderMongoId) });
+                if (mongoUser) {
+                    userName = mongoUser.fullName || mongoUser.displayName || 'Unknown User';
+                    userPhotoURL = mongoUser.profileImage || mongoUser.photoURL || '';
+                }
+            } catch (error) {
+                console.warn(`[MIGRATION_WARN] Could not find user info for ${senderMongoId}:`, error);
+            }
+            
+            // Create message data for Firestore
+            const messageData: { [key: string]: any } = {
+                text: messageText, // Use the safe text value
+                createdAt: message.createdAt instanceof Date ? message.createdAt : new Date(),
                 userId: migratedUser.firebaseUid,
+                userName: userName,
+                userPhotoURL: userPhotoURL,
+                originalMongoId: message._id.toString(),
             };
+            
+            // If the user is a placeholder, mark the message accordingly
+            if (migratedUser.isPlaceholder) {
+                messageData.senderIsPlaceholder = true;
+            }
             
             exportedData.messages.push(JSON.parse(JSON.stringify(messageData)));
             const messageRef = firestoreCommunityRef.collection('messages').doc();
             batch.set(messageRef, messageData);
         } else {
-             console.warn(`[MIGRATION_WARN] Skipping message ID ${message._id} because sender ${senderMongoId} was not found in the migrated user map.`);
+            // Try to find the user in MongoDB to get more info
+            try {
+                const mongoUser = await db.collection('users').findOne({ _id: new ObjectId(senderMongoId) });
+                
+                // Use a system user ID instead of trying to fetch admin user
+                // This avoids the admin user lookup error
+                const systemUserId = 'system-migration-user';
+                
+                // Ensure message text is not undefined
+                const messageText = message.text || ''; // Default to empty string if undefined
+                
+                const messageData = {
+                    text: messageText, // Use the safe text value
+                    createdAt: message.createdAt instanceof Date ? message.createdAt : new Date(),
+                    userId: systemUserId,
+                    userName: 'System Migration',
+                    userPhotoURL: '',
+                    isPlaceholder: true,
+                    originalMongoId: message._id.toString(),
+                    originalSenderId: senderMongoId,
+                    originalSenderEmail: mongoUser?.email || 'unknown',
+                    originalSenderName: mongoUser?.fullName || mongoUser?.displayName || 'Unknown User',
+                };
+                
+                // Only add the message if we have valid text
+                if (messageText) {
+                    exportedData.messages.push(JSON.parse(JSON.stringify(messageData)));
+                    const messageRef = firestoreCommunityRef.collection('messages').doc();
+                    batch.set(messageRef, messageData);
+                } else {
+                    console.log(`[MIGRATION_WARN] Skipping message ${message._id} due to empty text`);
+                }
+            } catch (error) {
+                console.error(`[MIGRATION_ERROR] Failed to create placeholder message for ${message._id}:`, error);
+            }
         }
     }
     
     // ** Step 8: Commit all changes
     await batch.commit();
 
-    const summaryMessage = `Migrated 1 community, ${exportedData.memberships.length} members (with profiles), and ${exportedData.messages.length} messages.`;
+    // Count how many placeholder users we have
+    const placeholderUsers = migratedUsersResults.filter(u => u.isPlaceholder).length;
+    
+    const summaryMessage = `Migrated 1 community, ${exportedData.memberships.length} members (with profiles), and ${exportedData.messages.length} messages. ${placeholderUsers} placeholder users need processing.`;
     console.log(`[MIGRATION_SUCCESS] Batch commit successful. ${summaryMessage}`);
 
+    // If we have placeholder users, try to process them immediately
+    if (placeholderUsers > 0) {
+      try {
+        // Import the processPlaceholderUsers function dynamically to avoid circular dependencies
+        const { processPlaceholderUsers } = await import('./actions/user-actions');
+        const processResult = await processPlaceholderUsers();
+        console.log(`[PLACEHOLDER_PROCESSING] ${processResult.message}`);
+      } catch (error) {
+        console.error('[PLACEHOLDER_PROCESSING_ERROR]', error);
+      }
+    }
+
     return { 
-        success: true, 
-        message: summaryMessage,
-        exportedData: JSON.stringify(exportedData, null, 2),
+      success: true, 
+      message: summaryMessage,
+      exportedData,
+      placeholderUsers
     };
 
   } catch (error: any) {

@@ -1,11 +1,9 @@
-'use client';
-
-import React, { Suspense } from 'react';
+import { Suspense } from 'react';
 import { getPaginatedFirestoreCommunities } from '@/app/fire/actions';
 import { CommunityListClient } from '@/components/communities/community-list-client';
 import { CommunityCardSkeleton } from '@/components/communities/community-card-skeleton';
 
-// Loading component
+// Loading component for Suspense fallback
 function CommunitiesLoading() {
   return (
     <div>
@@ -28,57 +26,40 @@ function CommunitiesLoading() {
   );
 }
 
-const PAGE_SIZE = 30;
+// Reduced page size for faster initial loading
+const PAGE_SIZE = 10;
 
+// Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic';
 
-export default function CommunitiesDashboardPage({
+// This is a Server Component that fetches data on the server
+export default async function CommunitiesDashboardPage({
   searchParams,
 }: {
-  searchParams: any;
+  searchParams?: { [key: string]: string | string[] | undefined };
 }) {
-  // Create a client component wrapper to handle the data fetching
-  return (
-    <CommunitiesPageContent searchParams={searchParams} />
-  );
-}
-
-// Client component wrapper
-function CommunitiesPageContent({ searchParams }: { searchParams: any }) {
-  // Use React.use to properly handle the searchParams promise
-  const resolvedParams = React.use(searchParams) as { q?: string | string[] };
-  const searchTerm = resolvedParams?.q ? String(resolvedParams.q) : '';
-  // Use state to store the communities data
-  const [data, setData] = React.useState<{ communities: any[], hasMore: boolean }>({ communities: [], hasMore: false });
-  const [loading, setLoading] = React.useState(true);
+  // Properly await searchParams before accessing its properties
+  const resolvedParams = await Promise.resolve(searchParams);
   
-  // Fetch the communities data
-  React.useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      const result = await getPaginatedFirestoreCommunities(PAGE_SIZE, null, searchTerm);
-      setData(result);
-      setLoading(false);
-    }
-    fetchData();
-  }, [searchTerm]);
+  // Extract search term from URL params
+  const searchTerm = typeof resolvedParams?.q === 'string' ? resolvedParams.q : '';
   
-  // Show loading state while fetching data
-  if (loading) {
-    return <CommunitiesLoading />;
-  }
-
+  // Fetch initial communities data on the server
+  const initialData = await getPaginatedFirestoreCommunities(PAGE_SIZE, null, searchTerm);
+  
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">Communities</h2>
       </div>
+      
       <Suspense fallback={<CommunitiesLoading />}>
+        {/* Pass the server-fetched data to the client component */}
         <CommunityListClient 
-            initialCommunities={data.communities}
-            initialHasMore={data.hasMore}
-            pageSize={PAGE_SIZE}
-            initialSearchTerm={searchTerm}
+          initialCommunities={initialData.communities}
+          initialHasMore={initialData.hasMore}
+          pageSize={PAGE_SIZE}
+          initialSearchTerm={searchTerm}
         />
       </Suspense>
     </div>

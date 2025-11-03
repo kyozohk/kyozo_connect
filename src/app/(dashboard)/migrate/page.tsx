@@ -10,12 +10,15 @@ export default async function MigratePage({
 }: {
   searchParams?: { [key: string]: string | string[] | undefined };
 }) {
+  // Properly await searchParams before passing it to client components
+  const resolvedParams = await Promise.resolve(searchParams);
+  
   const communities: Community[] = await getCommunities();
 
   return (
     <DashboardClient
       communities={communities}
-      searchParams={searchParams}
+      searchParams={resolvedParams}
       dataSource="mongodb"
     />
   );

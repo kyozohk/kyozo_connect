@@ -56,6 +56,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: '/inbox', icon: Inbox, label: 'Inbox' },
     { href: '/migrate', icon: DatabaseZap, label: 'Migrate' },
     { href: '/firebase', icon: Users, label: 'Firebase Data' },
+    { href: '/admin/process-users', icon: Users, label: 'Process Users' },
+    { href: '/admin/update-memberships', icon: Users, label: 'Update Memberships' },
     { href: '/subscription', icon: CreditCard, label: 'Subscription' },
     { href: '/settings', icon: Settings, label: 'Settings' },
     { href: '/team', icon: Users, label: 'Team' },

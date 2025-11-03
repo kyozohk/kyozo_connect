@@ -6,6 +6,7 @@ export interface Community {
   name: string;
   communityProfileImage?: string;
   memberCount: number;
+  messageCount?: number;
   data: any;
 }
 
@@ -19,12 +20,15 @@ export interface Member {
   joinedAt?: string;
   role: 'owner' | 'admin' | 'member';
   passwordInitialized?: boolean;
+  isPlaceholder?: boolean;
+  needsUserCreation?: boolean;
   data: any;
 }
 
 export interface Message {
   id: string;
   sender: Partial<Member>;
+  recipient?: Partial<Member>; // Add recipient field
   text: string;
   createdAt: string;
   data: any;

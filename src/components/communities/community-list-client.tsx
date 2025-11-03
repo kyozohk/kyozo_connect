@@ -1,13 +1,13 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useTransition } from 'react';
 import { useInView } from 'react-intersection-observer';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { LayoutGrid, List, Loader2 } from 'lucide-react';
 import { Community } from '@/types';
-import { getPaginatedFirestoreCommunities } from '@/app/fire/actions';
+import { fetchMoreCommunities } from '@/app/actions/community-actions';
 import { CommunityCard } from './community-card';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
@@ -39,17 +39,28 @@ export function CommunityListClient({ initialCommunities, initialHasMore, pageSi
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  const [isPending, startTransition] = useTransition();
+  
   const loadMoreCommunities = useCallback(async () => {
-    if (!hasMore || isLoading) return;
+    if (!hasMore || isLoading || isPending) return;
     setIsLoading(true);
 
     const lastId = communities.length > 0 ? communities[communities.length - 1].id : null;
-    const { communities: newCommunities, hasMore: newHasMore } = await getPaginatedFirestoreCommunities(pageSize, lastId, debouncedSearchTerm);
     
-    setCommunities((prev) => [...prev, ...newCommunities]);
-    setHasMore(newHasMore);
-    setIsLoading(false);
-  }, [hasMore, isLoading, communities, pageSize, debouncedSearchTerm]);
+    try {
+      // Use server action for fetching more communities
+      const result = await fetchMoreCommunities(pageSize, lastId, debouncedSearchTerm);
+      
+      startTransition(() => {
+        setCommunities((prev) => [...prev, ...result.communities]);
+        setHasMore(result.hasMore);
+      });
+    } catch (error) {
+      console.error('Error loading more communities:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [hasMore, isLoading, isPending, communities, pageSize, debouncedSearchTerm, startTransition]);
 
   useEffect(() => {
     if (inView && !isLoading) {
@@ -70,13 +81,20 @@ export function CommunityListClient({ initialCommunities, initialHasMore, pageSi
     setIsLoading(true);
     setCommunities([]);
     setHasMore(true); // Assume there is more until fetch proves otherwise
-    getPaginatedFirestoreCommunities(pageSize, null, debouncedSearchTerm).then(({ communities: newCommunities, hasMore: newHasMore }) => {
-        setCommunities(newCommunities);
-        setHasMore(newHasMore);
-        setIsLoading(false);
+    
+    // Use server action for search
+    fetchMoreCommunities(pageSize, null, debouncedSearchTerm).then((result) => {
+      startTransition(() => {
+        setCommunities(result.communities);
+        setHasMore(result.hasMore);
+      });
+      setIsLoading(false);
+    }).catch(error => {
+      console.error('Error searching communities:', error);
+      setIsLoading(false);
     });
 
-  }, [debouncedSearchTerm, pageSize, router, pathname, searchParams]);
+  }, [debouncedSearchTerm, pageSize, router, pathname, searchParams, startTransition]);
 
 
   return (

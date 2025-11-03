@@ -6,6 +6,8 @@ import { Community, Member, Message } from '@/types';
 import { UserRecord } from 'firebase-admin/auth';
 import { format, parseISO } from 'date-fns';
 import { DocumentData, Query, Timestamp } from 'firebase-admin/firestore';
+import { cache } from '@/lib/cache';
+import { serializeFirestoreData } from '@/lib/firebase-utils';
 
 export async function getFirestoreCommunities(): Promise<Community[]> {
   const adminDb = await getAdminDb();
@@ -20,12 +22,15 @@ export async function getFirestoreCommunities(): Promise<Community[]> {
       const communityData = doc.data();
       const membersSnapshot = await adminDb.collection('memberships').where('communityId', '==', doc.id).get();
       
+      // Properly serialize the data to avoid Firestore Timestamp issues
+      const serializedData = serializeFirestoreData(communityData);
+      
       return {
         id: doc.id,
         name: communityData.name,
         communityProfileImage: communityData.communityProfileImage,
         memberCount: membersSnapshot.size,
-        data: JSON.parse(JSON.stringify(communityData)),
+        data: serializedData,
       };
     });
 
@@ -46,6 +51,21 @@ export async function getPaginatedFirestoreCommunities(
     startAfter: any | null = null,
     searchTerm: string = ''
 ): Promise<{ communities: PaginatedCommunity[], hasMore: boolean }> {
+  // Generate a cache key based on the parameters
+  const cacheKey = `communities:${pageSize}:${startAfter || 'null'}:${searchTerm}`;
+  
+  // Only use cache for initial page loads without search or pagination
+  const shouldUseCache = !startAfter && !searchTerm;
+  
+  // Use cache for initial page loads without search
+  if (shouldUseCache) {
+    const cachedResult = cache.get<{ communities: PaginatedCommunity[], hasMore: boolean }>(cacheKey);
+    if (cachedResult) {
+      console.log('Using cached communities data');
+      return cachedResult;
+    }
+  }
+  
   const adminDb = await getAdminDb();
   try {
     let query: Query<DocumentData> = adminDb.collection('communities');
@@ -66,15 +86,10 @@ export async function getPaginatedFirestoreCommunities(
     }
     
     const snapshot = await query.get();
-
-    const communities: PaginatedCommunity[] = await Promise.all(snapshot.docs.map(async (doc) => {
+    
+    // Process communities and fetch member/message counts
+    const communityPromises = snapshot.docs.map(async (doc) => {
       const data = doc.data();
-
-      // Fetch member count
-      const membersSnapshot = await adminDb.collection('memberships').where('communityId', '==', doc.id).get();
-      
-      // Fetch message count
-      const messagesSnapshot = await doc.ref.collection('messages').get();
 
       let createdAt: string | undefined = undefined;
       if (data.createdAt && data.createdAt instanceof Timestamp) {
@@ -82,25 +97,63 @@ export async function getPaginatedFirestoreCommunities(
       } else if (typeof data.createdAt === 'string') {
         createdAt = data.createdAt;
       }
+      
+      // Fetch actual member count from memberships collection
+      const membersSnapshot = await adminDb
+        .collection('memberships')
+        .where('communityId', '==', doc.id)
+        .get();
+      
+      // Fetch message count from messages subcollection
+      const messagesSnapshot = await adminDb
+        .collection('communities')
+        .doc(doc.id)
+        .collection('messages')
+        .get();
+      
+      // Get real counts
+      const memberCount = membersSnapshot.size;
+      const messageCount = messagesSnapshot.size;
+      
+      // Update the community document with the correct counts if they're different
+      if (data.memberCount !== memberCount || data.messageCount !== messageCount) {
+        await adminDb.collection('communities').doc(doc.id).update({
+          memberCount,
+          messageCount
+        });
+      }
 
+      // Properly serialize the data to avoid Firestore Timestamp issues
+      const serializedData = serializeFirestoreData(data);
+      
       return {
         id: doc.id,
         name: data.name || 'Unnamed Community',
         communityProfileImage: data.communityProfileImage || '',
-        memberCount: membersSnapshot.size,
-        messageCount: messagesSnapshot.size,
+        memberCount,
+        messageCount,
         createdAt,
-        data: JSON.parse(JSON.stringify(data)),
+        data: serializedData,  // Use the properly serialized data
       };
-    }));
+    });
 
+    let communities = await Promise.all(communityPromises);
+    
     let hasMore = false;
     if (communities.length > pageSize) {
       hasMore = true;
       communities.pop(); // Remove the extra item
     }
 
-    return { communities, hasMore };
+    const result = { communities, hasMore };
+    
+    // Cache the result for initial page loads
+    if (shouldUseCache) {
+      // Cache for 5 minutes
+      cache.set(cacheKey, result, 5 * 60 * 1000);
+    }
+
+    return result;
 
   } catch (error) {
     console.error('Failed to get paginated communities from Firestore:', error);
@@ -122,30 +175,81 @@ export async function getFirestoreMembers(communityId: string): Promise<Member[]
 
     const memberPromises = membersSnapshot.docs.map(async (doc) => {
       const membership = doc.data();
+      const userId = membership.userId;
+      const joinedAt = membership.joinedAt?.toDate ? membership.joinedAt.toDate().toISOString() : new Date().toISOString();
+      const role = membership.participation?.role || membership.role || 'member';
+      
+      // Check if this is a placeholder user
+      const isPlaceholder = membership.isPlaceholder === true || (userId && userId.toString().startsWith('placeholder-'));
+      
       try {
-        const userRecord: UserRecord = await adminAuth.getUser(membership.userId);
-        const joinedAt = membership.joinedAt?.toDate ? membership.joinedAt.toDate().toISOString() : new Date().toISOString();
-
-        // Correctly access nested fields from the membership document
-        const role = membership.participation?.role || membership.role || 'member';
+        // If it's a placeholder, we need to handle it differently
+        if (isPlaceholder) {
+          // Use the membership data to create a member object
+          const displayName = membership.originalUserName || membership.displayName || 'Unknown User';
+          const email = membership.originalUserEmail || membership.email || '';
+          const phoneNumber = membership.phoneNumber || '';
+          const photoURL = membership.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(displayName)}`;
+          
+          console.log(`[MEMBER_INFO] Using placeholder data for member ${userId} in community ${communityId}`);
+          
+          const member: Member = {
+            id: userId,
+            uid: userId,
+            displayName: displayName,
+            photoURL: photoURL,
+            email: email,
+            phoneNumber,
+            role: role as 'owner' | 'admin' | 'member',
+            joinedAt,
+            passwordInitialized: false,
+            isPlaceholder: true,
+            data: serializeFirestoreData(membership),
+          };
+          return member;
+        }
+        
+        // For non-placeholder users, try to get the user from Firebase Auth
+        const userRecord: UserRecord = await adminAuth.getUser(userId);
         const phoneNumber = membership.participation?.phoneNumber || userRecord.phoneNumber || '';
 
-        return {
+        const member: Member = {
           id: userRecord.uid, 
           uid: userRecord.uid,
           displayName: userRecord.displayName || userRecord.email || 'Unknown User',
           photoURL: userRecord.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(userRecord.displayName || 'U')}`,
           email: userRecord.email || '',
-          phoneNumber: phoneNumber,
-          role: role,
-          joinedAt: joinedAt,
+          phoneNumber,
+          role: role as 'owner' | 'admin' | 'member',
+          joinedAt,
           passwordInitialized: membership.passwordInitialized,
-          data: JSON.parse(JSON.stringify({ ...userRecord.toJSON(), ...membership })),
+          data: serializeFirestoreData({ ...userRecord.toJSON(), ...membership }),
         };
+        return member;
       } catch (error: any) {
         if (error.code === 'auth/user-not-found') {
-          console.warn(`User with UID ${membership.userId} not found in Auth for membership ${doc.id}`);
-          return null; // This member will be filtered out
+          console.warn(`User with UID ${userId} not found in Auth for membership ${doc.id}`);
+          
+          // Instead of returning null, create a placeholder member using membership data
+          const displayName = membership.originalUserName || membership.displayName || 'Unknown User';
+          const email = membership.originalUserEmail || membership.email || '';
+          const photoURL = membership.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(displayName)}`;
+          
+          const member: Member = {
+            id: userId,
+            uid: userId,
+            displayName: displayName,
+            photoURL: photoURL,
+            email: email,
+            phoneNumber: membership.phoneNumber || '',
+            role: role as 'owner' | 'admin' | 'member',
+            joinedAt,
+            passwordInitialized: false,
+            isPlaceholder: true,
+            needsUserCreation: true,
+            data: serializeFirestoreData(membership),
+          };
+          return member;
         }
         throw error; // Re-throw other errors
       }
@@ -156,10 +260,10 @@ export async function getFirestoreMembers(communityId: string): Promise<Member[]
     // Sort members: owner, then admins, then members, then by displayName
     members.sort((a, b) => {
         const roleOrder = { owner: 0, admin: 1, member: 2 };
-        if (a.role !== b.role) {
+        if (a && b && a.role !== b.role) {
             return (roleOrder[a.role as keyof typeof roleOrder] || 2) - (roleOrder[b.role as keyof typeof roleOrder] || 2);
         }
-        return a.displayName.localeCompare(b.displayName);
+        return a && b ? a.displayName.localeCompare(b.displayName) : 0;
     });
 
     return members;
@@ -200,7 +304,7 @@ export async function getFirestoreMessagesForMember(communityId: string, memberI
                         displayName: userRecord.displayName || userRecord.email || 'Unknown',
                         photoURL: userRecord.photoURL || '',
                         email: userRecord.email || '',
-                        data: JSON.parse(JSON.stringify(userRecord.toJSON())),
+                        data: serializeFirestoreData(userRecord.toJSON()),
                     };
                     userCache.set(senderId, sender);
                 } catch (error) {
@@ -219,7 +323,7 @@ export async function getFirestoreMessagesForMember(communityId: string, memberI
                 text: messageData.text,
                 createdAt: messageData.createdAt.toDate().toISOString(),
                 sender,
-                data: JSON.parse(JSON.stringify(messageData)),
+                data: serializeFirestoreData(messageData),
             };
         });
 

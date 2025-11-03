@@ -9,12 +9,15 @@ export default async function Inbox2Page({
 }: {
   searchParams?: { [key: string]: string | string[] | undefined };
 }) {
+  // Properly await searchParams before passing it to client components
+  const resolvedParams = await Promise.resolve(searchParams);
+  
   const communities: CommunityWithMembers[] = await getCommunitiesWithMembers();
 
   return (
     <DashboardClient2
       communities={communities}
-      searchParams={searchParams}
+      searchParams={resolvedParams}
       dataSource="mongodb"
     />
   );

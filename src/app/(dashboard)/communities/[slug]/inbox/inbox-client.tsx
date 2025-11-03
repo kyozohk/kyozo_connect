@@ -4,7 +4,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Member, Community } from '@/types';
-import { MemberList } from '@/components/dashboard/member-list';
+import { MemberListClient } from '@/components/members/member-list-client';
 import { MessageListClient } from '@/components/dashboard/message-list-client';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 
@@ -65,12 +65,10 @@ export function CommunityInboxClient({
     <div className="h-full">
       <ResizablePanelGroup direction="horizontal" className="h-full w-full">
         <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
-          <MemberList
-            communityId={community?.id || ''}
+          <MemberListClient
             initialMembers={initialMembers}
             onSelectMember={handleSelectMember}
-            initialSelectedMemberId={getInitialMemberId()}
-            dataSource="firestore"
+            selectionMode="single"
           />
         </ResizablePanel>
         <ResizableHandle withHandle />

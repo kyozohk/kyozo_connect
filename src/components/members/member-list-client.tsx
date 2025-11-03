@@ -1,6 +1,6 @@
 
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { LayoutGrid, List, Loader2, MessageSquare, Edit, Trash2, Phone, CalendarIcon } from 'lucide-react';
@@ -23,9 +23,10 @@ type SelectionMode = 'none' | 'single' | 'multiple';
 interface MemberListClientProps {
     initialMembers: Member[];
     selectionMode?: SelectionMode;
+    onSelectMember?: (member: Member | null) => void;
 }
 
-export function MemberListClient({ initialMembers, selectionMode = 'none' }: MemberListClientProps) {
+export function MemberListClient({ initialMembers, selectionMode = 'none', onSelectMember }: MemberListClientProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [members, setMembers] = useState<Member[]>(initialMembers);
   const [searchTerm, setSearchTerm] = useState('');
@@ -36,35 +37,72 @@ export function MemberListClient({ initialMembers, selectionMode = 'none' }: Mem
   const handleSelectMember = (memberId: string) => {
     setSelectedMembers(prev => {
         const newSelection = new Set(prev);
-        if (newSelection.has(memberId)) {
+        const wasSelected = newSelection.has(memberId);
+        
+        if (wasSelected) {
             newSelection.delete(memberId);
         } else {
-             if (selectionMode === 'single') {
+            if (selectionMode === 'single') {
                 newSelection.clear();
-             }
-             newSelection.add(memberId);
+            }
+            newSelection.add(memberId);
         }
+        
+        // Schedule the onSelectMember call after the state update
+        setTimeout(() => {
+            if (onSelectMember) {
+                if (wasSelected) {
+                    onSelectMember(null);
+                } else {
+                    const selectedMember = members.find(m => m.id === memberId);
+                    if (selectedMember) {
+                        onSelectMember(selectedMember);
+                    }
+                }
+            }
+        }, 0);
+        
         return newSelection;
-    })
+    });
   }
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-        setSelectedMembers(new Set(members.map(m => m.id)));
+        // Ensure we're using string IDs
+        setSelectedMembers(new Set(members.map(m => m.id.toString())));
+        
+        // If in single selection mode and we have onSelectMember, select the first member
+        if (selectionMode === 'single' && onSelectMember && members.length > 0) {
+            // Schedule after state update
+            setTimeout(() => {
+                onSelectMember(members[0]);
+            }, 0);
+        }
     } else {
         setSelectedMembers(new Set());
+        
+        // Clear selection if we have onSelectMember
+        if (onSelectMember) {
+            // Schedule after state update
+            setTimeout(() => {
+                onSelectMember(null);
+            }, 0);
+        }
     }
   }
   
   const sortedMembers = useMemo(() => {
     return [...members].sort((a, b) => {
-        let compareA = a[sortKey] || '';
-        let compareB = b[sortKey] || '';
-
+        // Handle joinedAt separately since it needs special date comparison
         if(sortKey === 'joinedAt') {
-            compareA = a.joinedAt ? new Date(a.joinedAt).getTime() : 0;
-            compareB = b.joinedAt ? new Date(b.joinedAt).getTime() : 0;
+            const timeA = a.joinedAt ? new Date(a.joinedAt).getTime() : 0;
+            const timeB = b.joinedAt ? new Date(b.joinedAt).getTime() : 0;
+            return sortDir === 'asc' ? timeA - timeB : timeB - timeA;
         }
+        
+        // For other fields, do string comparison
+        const compareA = String(a[sortKey] || '');
+        const compareB = String(b[sortKey] || '');
 
         if (compareA < compareB) return sortDir === 'asc' ? -1 : 1;
         if (compareA > compareB) return sortDir === 'asc' ? 1 : -1;
@@ -81,6 +119,25 @@ export function MemberListClient({ initialMembers, selectionMode = 'none' }: Mem
         (member.data?.tags as string[])?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [sortedMembers, searchTerm]);
+  
+  // Handle initial selection if needed
+  // We use a ref to track if we've already called onSelectMember
+  const hasCalledSelectMember = useRef(false);
+  
+  useEffect(() => {
+    // If we're in single selection mode and have a selected member but onSelectMember hasn't been called yet
+    if (!hasCalledSelectMember.current && selectionMode === 'single' && selectedMembers.size === 1 && onSelectMember) {
+      const selectedMemberId = Array.from(selectedMembers)[0];
+      const selectedMember = members.find(m => m.id === selectedMemberId);
+      if (selectedMember) {
+        // Use setTimeout to avoid calling during render
+        setTimeout(() => {
+          onSelectMember(selectedMember);
+          hasCalledSelectMember.current = true;
+        }, 0);
+      }
+    }
+  }, [selectionMode, selectedMembers, members, onSelectMember]); // Include all dependencies
   
   const isAllSelected = selectedMembers.size > 0 && selectedMembers.size === filteredMembers.length;
 

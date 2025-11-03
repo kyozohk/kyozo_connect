@@ -19,6 +19,9 @@ interface CommunityHeaderProps {
     onDelete?: () => void;
 }
 
+/**
+ * Community header component that can be used in both server and client components
+ */
 export function CommunityHeader({ community, onDelete }: CommunityHeaderProps) {
     const data = community.data as any;
     const tags = data.tags && Array.isArray(data.tags) ? data.tags : [];
