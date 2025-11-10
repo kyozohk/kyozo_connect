@@ -18,19 +18,24 @@ export function useUser() {
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
-      setLoading(false);
-
+      setLoading(true);
       if (firebaseUser) {
-        const idToken = await firebaseUser.getIdToken();
-        await fetch('/api/auth/session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ idToken }),
-        });
+        const idToken = await firebaseUser.getIdToken(true); // Force refresh
+        try {
+          await fetch('/api/auth/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken }),
+          });
+          setUser(firebaseUser);
+        } catch (error) {
+          console.error("Failed to create session cookie:", error);
+          setUser(null); // Clear user if session creation fails
+        }
+      } else {
+        setUser(null);
       }
+      setLoading(false);
     });
 
     return () => unsubscribe();
