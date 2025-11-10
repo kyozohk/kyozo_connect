@@ -20,17 +20,20 @@ export function useUser() {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
       if (firebaseUser) {
-        const idToken = await firebaseUser.getIdToken(true); // Force refresh
+        // Force refresh the token to ensure it's fresh
+        const idToken = await firebaseUser.getIdToken(true); 
         try {
+          // Make the API call to set the session cookie
           await fetch('/api/auth/session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ idToken }),
           });
+          // Set the user state *after* the session is successfully created
           setUser(firebaseUser);
         } catch (error) {
           console.error("Failed to create session cookie:", error);
-          setUser(null); // Clear user if session creation fails
+          setUser(null); // Log out user if session creation fails
         }
       } else {
         setUser(null);
@@ -38,6 +41,7 @@ export function useUser() {
       setLoading(false);
     });
 
+    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, [auth]);
 
