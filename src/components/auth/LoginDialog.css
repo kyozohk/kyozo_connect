@@ -1,0 +1,40 @@
+.input-container {
+  position: relative;
+  border-radius: 0.375rem; /* Equivalent to rounded-md */
+  transition: all 0.3s ease-in-out;
+}
+
+.input-container::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(120deg, #f094c4, #8b5cf6, #3b82f6);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.input-container:focus-within::before {
+  opacity: 1;
+}
+
+.input-error::before {
+    opacity: 1;
+    background: linear-gradient(120deg, #ef4444, #f87171);
+}
+
+.input-field {
+  width: 100%;
+  background-color: transparent; /* Changed from black to transparent */
+  border: none;
+  outline: none;
+  padding: 0.75rem 1rem; /* Equivalent to py-3 px-4 */
+  color: white;
+  font-size: 0.875rem; /* text-sm */
+}

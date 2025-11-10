@@ -4,14 +4,17 @@ import Hero from '@/components/landing/Hero';
 import FixedFooter from '@/components/landing/FixedFooter';
 import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import FeatureCard from '@/components/landing/FeatureCard';
 import ScrollRevealText from '@/components/landing/ScrollRevealText';
+import { CustomDialog } from '@/components/ui/CustomDialog';
+import { Login } from '@/components/auth/Login';
 
 export default function Home() {
   const { user, loading } = useUser();
   const router = useRouter();
+  const [isLoginOpen, setLoginOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
@@ -33,12 +36,21 @@ export default function Home() {
 
   return (
     <main>
-      <Hero />
+      <Hero onGetStarted={() => setLoginOpen(true)} />
       <FeatureCard />
-      <div className="my-80 bg-white" style={{ paddingLeft: '10%', paddingRight: '10%' }}>
+      <div className="my-80" style={{ paddingLeft: '10%', paddingRight: '10%' }}>
         <ScrollRevealText text="Where creative minds converge" />      
       </div>
-      <FixedFooter />
+      <FixedFooter onGetStarted={() => setLoginOpen(true)} />
+      <CustomDialog
+        isOpen={isLoginOpen}
+        onClose={() => setLoginOpen(false)}
+        title="Welcome to Kyozo"
+        description="Create an account or sign in to access your community dashboard and settings."
+        imageSrc="/images/kyozo-mushrooms.png"
+      >
+        <Login />
+      </CustomDialog>
     </main>
   );
 }

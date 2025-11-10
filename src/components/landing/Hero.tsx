@@ -1,13 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
 
 interface HeroProps {
   text?: string;
+  onGetStarted: () => void;
 }
 
 const Hero: React.FC<HeroProps> = ({ 
-  text = 'Discover Your Creative Universe'
+  text = 'Discover Your Creative Universe',
+  onGetStarted,
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const words = text.split(' ');

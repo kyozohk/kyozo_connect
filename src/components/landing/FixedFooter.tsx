@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from "@/components/ui/button";
-import LoginDialog from './LoginDialog';
 import { useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter, usePathname } from 'next/navigation';
@@ -11,13 +10,13 @@ import { Loader2 } from 'lucide-react';
 
 interface FixedFooterProps {
   className?: string;
+  onGetStarted: () => void;
 }
 
-const FixedFooter: React.FC<FixedFooterProps> = ({ className = '' }) => {
+const FixedFooter: React.FC<FixedFooterProps> = ({ className = '', onGetStarted }) => {
   const { user, loading, auth } = useUser();
   const router = useRouter();
   const pathname = usePathname();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
@@ -25,18 +24,6 @@ const FixedFooter: React.FC<FixedFooterProps> = ({ className = '' }) => {
       router.replace('/analytics');
     }
   }, [user, router, pathname]);
-
-  const openDialog = () => {
-    if (!user) {
-      router.push('/login');
-    } else {
-      router.push('/analytics');
-    }
-  };
-
-  const closeDialog = () => {
-    setIsDialogOpen(false);
-  };
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -89,7 +76,7 @@ const FixedFooter: React.FC<FixedFooterProps> = ({ className = '' }) => {
               </Button>
             ) : (
               <Button
-                onClick={openDialog}
+                onClick={onGetStarted}
                 className="joinButton"
                 style={{ backgroundColor: 'var(--accent-pink)'}}
                 size="sm"
