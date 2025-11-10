@@ -1,6 +1,6 @@
 'use client';
 import { useUser, useCollection, useFirestore } from '@/firebase';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { CreatePost } from '@/components/communities/CreatePost';
 import { Button } from '@/components/ui/button';
 import { collection, where, query } from 'firebase/firestore';
@@ -12,7 +12,7 @@ const CommunityPage = ({ params }: { params: { community_slug: string } }) => {
   const [isOwner, setIsOwner] = useState(false);
   const [isCreatePostOpen, setCreatePostOpen] = useState(false);
 
-  const communityQuery = React.useMemo(() => {
+  const communityQuery = useMemo(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'communities'), where('slug', '==', params.community_slug));
   }, [firestore, params.community_slug]);
