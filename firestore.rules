@@ -11,10 +11,13 @@ service cloud.firestore {
       allow read, write: if request.auth.uid == userId;
     }
 
-    // Communities can be read by anyone, but only created/updated/deleted by authenticated users.
+    // Communities can be read by anyone.
+    // Creation is allowed if the user is authenticated and is the owner.
+    // Updates/deletes are restricted to the owner.
     match /communities/{communityId} {
       allow read: if true;
-      allow create, update, delete: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.owner == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.owner == request.auth.uid;
 
       // Messages can be read and created by any authenticated user.
       // Updates/deletes are restricted to the message author.
