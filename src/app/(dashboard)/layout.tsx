@@ -37,7 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (auth) {
         await signOut(auth);
     }
-    router.push('/login');
+    router.push('/');
   };
 
   if (loading || !user) {
