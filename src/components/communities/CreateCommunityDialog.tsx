@@ -1,5 +1,6 @@
 'use client';
 import { useState, useTransition } from 'react';
+import { useUser } from '@/firebase';
 import { CustomDialog } from '@/components/ui/CustomDialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ export const CreateCommunityDialog: React.FC<CreateCommunityDialogProps> = ({
   isOpen,
   onClose,
 }) => {
+  const { user } = useUser();
   const [isPending, startTransition] = useTransition();
   const [name, setName] = useState('The Adventurers Guild');
   const [slug, setSlug] = useState('adventurers-guild');
@@ -73,6 +75,20 @@ export const CreateCommunityDialog: React.FC<CreateCommunityDialogProps> = ({
     >
       <div className="grid gap-4 py-4" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
         {error && <p className="text-red-500 col-span-4">{error}</p>}
+        
+        <div className="col-span-4 bg-muted/50 p-3 rounded-lg text-xs">
+            <h4 className="font-semibold mb-2">Authentication Status</h4>
+            {user ? (
+                <div>
+                    <p><strong>Status:</strong> <span className="text-green-500">Logged In</span></p>
+                    <p><strong>Email:</strong> {user.email}</p>
+                    <p><strong>UID:</strong> {user.uid}</p>
+                </div>
+            ) : (
+                <p><span className="text-red-500">Not Logged In</span></p>
+            )}
+        </div>
+
         <div className="grid grid-cols-4 items-center gap-4">
           <label htmlFor="name" className="text-right">Name</label>
           <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" />
@@ -112,7 +128,7 @@ export const CreateCommunityDialog: React.FC<CreateCommunityDialogProps> = ({
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
             <label htmlFor="type" className="text-right">Type</label>
-            <Select value={communityType} onValuechange={setCommunityType}>
+            <Select value={communityType} onValueChange={setCommunityType}>
                 <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Select type" />
                 </SelectTrigger>

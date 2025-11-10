@@ -8,9 +8,17 @@ export async function createCommunity(communityData: any) {
   try {
     const sessionCookie = cookies().get('__session')?.value;
     if (!sessionCookie) {
-        return { error: 'Unauthorized. You must be logged in to create a community.' };
+        return { error: 'Session cookie not found. Please try logging in again.' };
     }
-    const decodedToken = await getAdminAuth().verifySessionCookie(sessionCookie, true);
+    
+    let decodedToken;
+    try {
+        decodedToken = await getAdminAuth().verifySessionCookie(sessionCookie, true);
+    } catch (authError) {
+        console.error('Error verifying session cookie:', authError);
+        return { error: 'Invalid session. Please log in again.' };
+    }
+    
     const userId = decodedToken.uid;
 
     const { name, slug, tagline, lore, mantras, communityPrivacy, communityType, tags, status, visibility, isDeleted } = communityData;
