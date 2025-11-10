@@ -33,7 +33,7 @@ export const Login = () => {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
 
-  const handleAuthSuccess = (redirectPath: string = '/analytics') => {
+  const handleAuthSuccess = (redirectPath: string = '/communities') => {
     router.push(redirectPath);
   };
   
@@ -317,4 +317,3 @@ export const Login = () => {
     </div>
   );
 };
-

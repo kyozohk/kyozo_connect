@@ -18,7 +18,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace('/analytics');
+      router.replace('/communities');
     }
   }, [user, loading, router]);
 

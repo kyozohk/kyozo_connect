@@ -21,7 +21,7 @@ const FixedFooter: React.FC<FixedFooterProps> = ({ className = '', onGetStarted 
 
   useEffect(() => {
     if (user && (pathname === '/' || pathname === '/login')) {
-      router.replace('/analytics');
+      router.replace('/communities');
     }
   }, [user, router, pathname]);
 
